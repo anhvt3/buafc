@@ -1,4 +1,4 @@
-const DATA_VERSION = "buafc-2026-07-16-v6";
+const DATA_VERSION = "buafc-2026-07-16-v7";
 
 const INITIAL_MEMBERS = [
   { name: "Vũ Thế Anh", status: "active" },
@@ -15,9 +15,9 @@ const INITIAL_MEMBERS = [
   { name: "Duy Phạm", status: "active" },
   { name: "Phạm Tiến Hùng", status: "active" },
   { name: "Quyền Ruốc", status: "active" },
-  { name: "Đình Ngọc", status: "active" },
+  { name: "Đình Ngọc", status: "paused" },
   { name: "Tien Pham Duy", status: "active" },
-  { name: "Chiem Minh", status: "active" },
+  { name: "Chiem Minh", status: "paused" },
   { name: "Vũ Văn An", status: "active" },
   { name: "Trần Nhật Thăng", status: "active" },
   { name: "Ho Trong Thuan", status: "active" },

@@ -24,13 +24,12 @@
           <div class="header-subtitle">Quản lý phong độ & quỹ phạt</div>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <button onclick="importBackup()" title="Import từ file backup (.json hoặc .xlsx)" style="background:rgba(59,130,246,0.15); color:var(--info); border:1px solid var(--info); border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">Import</button>
-          <button onclick="exportXLSX()" title="Tải XLSX 1 file 4 sheet" style="background:rgba(16,185,129,0.15); color:var(--win); border:1px solid var(--win); border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">XLSX</button>
-          <button onclick="exportBackup()" title="Backup JSON đầy đủ" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">Backup</button>
-          <div class="sync-status" id="syncStatus" onclick="showSetup()">
-            <span class="sync-dot" id="syncDot"></span>
-            <span id="syncText">Đang kết nối...</span>
-          </div>
+          <button onclick="showSetup()" title="Thiết lập & Backup" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.7; transition: opacity 0.2s;">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
@@ -396,7 +395,13 @@
       <div class="modal">
         <div class="modal-handle"></div>
         <div class="setup-screen">
-          <h2>🔗 Kết nối Google Sheets</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+            <h2 style="margin:0;">🔗 Kết nối Google Sheets</h2>
+            <div class="sync-status" id="syncStatus" style="margin:0; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:12px; display:flex; align-items:center; gap:6px; font-size:0.75rem;">
+              <span class="sync-dot" id="syncDot" style="width:8px; height:8px; border-radius:50%; background:#6b7280; display:inline-block;"></span>
+              <span id="syncText">Đang kết nối...</span>
+            </div>
+          </div>
           <p>Nhập URL của Google Apps Script Web App để đồng bộ dữ liệu với Google Sheets.</p>
           <div class="setup-steps">
             <div class="setup-step">
@@ -415,8 +420,15 @@
           <div class="form-group">
             <input type="text" class="form-input" id="apiUrl" placeholder="https://script.google.com/macros/s/...">
           </div>
-          <button class="btn btn-primary" onclick="connectApi()" style="margin-bottom:10px">Kết nối</button>
-          <button class="btn btn-secondary" onclick="closeModal('modalSetup')">Dùng offline trước</button>
+          <button class="btn btn-primary" onclick="connectApi()" style="margin-bottom:10px; width:100%;">Kết nối</button>
+          <button class="btn btn-secondary" onclick="closeModal('modalSetup')" style="width:100%;">Quay lại</button>
+
+          <h2 style="margin-top:25px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px; font-size:1.2rem;">💾 Thao tác File & Backup</h2>
+          <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+            <button class="btn btn-secondary" onclick="importBackup(); closeModal('modalSetup');" style="background:rgba(59,130,246,0.15); color:var(--info); border:1px solid var(--info); font-weight:700; width:100%;">Import dữ liệu (JSON / XLSX)</button>
+            <button class="btn btn-secondary" onclick="exportXLSX(); closeModal('modalSetup');" style="background:rgba(16,185,129,0.15); color:var(--win); border:1px solid var(--win); font-weight:700; width:100%;">Xuất Excel (XLSX)</button>
+            <button class="btn btn-secondary" onclick="exportBackup(); closeModal('modalSetup');" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; font-weight:700; width:100%;">Backup dữ liệu (JSON)</button>
+          </div>
         </div>
       </div>
     </div>

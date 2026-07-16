@@ -1100,11 +1100,6 @@ function renderPairs() {
   const bestPairs = [...validPairs].sort((a, b) => b.winRate - a.winRate || b.ppg - a.ppg || b.together - a.together);
   const worstPairs = [...validPairs].sort((a, b) => a.winRate - b.winRate || a.ppg - b.ppg || a.together - b.together);
 
-  const vtaPartners = validPairs.filter(p => p.p1 === 'Vũ Thế Anh' || p.p2 === 'Vũ Thế Anh').map(p => {
-    const partner = p.p1 === 'Vũ Thế Anh' ? p.p2 : p.p1;
-    return { partner, ...p };
-  }).sort((a, b) => b.winRate - a.winRate || b.ppg - a.ppg || b.together - a.together);
-
   const rowHTML = (p, idx, isBest) => {
     const rateClass = isBest ? 'best' : 'worst';
     return `<div class="duo-row">
@@ -1123,46 +1118,17 @@ function renderPairs() {
     </div>`;
   };
 
-  const partnerRowHTML = (p, idx) => {
-    return `<div class="duo-row">
-      <div class="duo-names">
-        <div class="duo-names-row">
-          <span>${p.partner}</span>
-        </div>
-        <div class="duo-detail">${p.together} trận · ${p.wins}T · ${p.draws}H · ${p.losses}B cùng đội</div>
-      </div>
-      <div class="duo-stats">
-        <div class="duo-winrate best">${p.winRate.toFixed(1)}%</div>
-        <div class="duo-detail">PPG: ${p.ppg.toFixed(2)}</div>
-      </div>
-    </div>`;
-  };
-
-  let html = '';
-
-  html += `
+  container.innerHTML = `
     <div class="pairs-subsection">
       <div class="pairs-subsection-title">👑 TOP CẶP BÀI TRÙNG ĂN Ý NHẤT</div>
       <div class="pairs-list">
-        ${bestPairs.slice(0, 3).map((p, idx) => rowHTML(p, idx, true)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
+        ${bestPairs.slice(0, 5).map((p, idx) => rowHTML(p, idx, true)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
       </div>
     </div>
-  `;
-
-  html += `
     <div class="pairs-subsection" style="margin-top: 10px;">
       <div class="pairs-subsection-title">⚠️ TOP CẶP THI ĐẤU KÉM ĂN Ý</div>
       <div class="pairs-list">
-        ${worstPairs.slice(0, 3).map((p, idx) => rowHTML(p, idx, false)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
-      </div>
-    </div>
-  `;
-
-  html += `
-    <div class="pairs-subsection" style="margin-top: 10px;">
-      <div class="pairs-subsection-title">🔥 BẠN DIỄN ĂN Ý CỦA VŨ THẾ ANH</div>
-      <div class="pairs-list">
-        ${vtaPartners.slice(0, 3).map((p, idx) => partnerRowHTML(p, idx)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
+        ${worstPairs.slice(0, 5).map((p, idx) => rowHTML(p, idx, false)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
       </div>
     </div>
   `;

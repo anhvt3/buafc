@@ -944,7 +944,7 @@ function renderCharts() {
         datasets: [{ 
           label: 'Tiền phạt tích lũy', 
           data: barData, 
-          backgroundColor: '#ff005c', 
+          backgroundColor: '#f72585', 
           borderRadius: 4
         }]
       },
@@ -1034,19 +1034,19 @@ function renderCharts() {
           {
             label: 'Thắng',
             data: winData,
-            backgroundColor: '#10b981',
+            backgroundColor: '#00F5D4',
             borderRadius: 4
           },
           {
             label: 'Hòa',
             data: drawData,
-            backgroundColor: '#00ffff',
+            backgroundColor: '#FFD166',
             borderRadius: 4
           },
           {
             label: 'Thua',
             data: loseData,
-            backgroundColor: '#ef4444',
+            backgroundColor: '#FF5A5F',
             borderRadius: 4
           }
         ]
@@ -1109,7 +1109,7 @@ function renderCharts() {
             data: winPercentData,
             rawCounts: displayPercent.map(item => item.win),
             totalMatches: displayPercent.map(item => item.played),
-            backgroundColor: '#10b981',
+            backgroundColor: '#4facfe',
             borderRadius: 4
           },
           {
@@ -1117,7 +1117,7 @@ function renderCharts() {
             data: drawPercentData,
             rawCounts: displayPercent.map(item => item.draw),
             totalMatches: displayPercent.map(item => item.played),
-            backgroundColor: '#00ffff',
+            backgroundColor: '#a855f7',
             borderRadius: 4
           },
           {
@@ -1125,7 +1125,7 @@ function renderCharts() {
             data: losePercentData,
             rawCounts: displayPercent.map(item => item.lose),
             totalMatches: displayPercent.map(item => item.played),
-            backgroundColor: '#ef4444',
+            backgroundColor: '#f43f5e',
             borderRadius: 4
           }
         ]

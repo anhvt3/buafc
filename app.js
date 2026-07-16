@@ -629,39 +629,59 @@ function renderMonthlyReport() {
     .join('') || '<div class="report-empty">Không có khoản phạt nào trong tháng</div>';
 }
 
+function getMemberStats(memberName) {
+  let wins = 0, draws = 0, losses = 0, played = 0;
+  state.matches.forEach(mt => {
+    const res = classifyResult(mt.result);
+    if (res === 'cancelled') return;
+    if (mt.playedTeam && mt.playedTeam.some(name => normName(name) === normName(memberName))) {
+      played++;
+      if (res === 'draw') draws++;
+      else if (mt.losingTeam && mt.losingTeam.some(name => normName(name) === normName(memberName))) losses++;
+      else wins++;
+    }
+  });
+  const lossRate = played ? losses / played : 0;
+  const winRate = played ? wins / played : 0;
+  return { played, wins, draws, losses, lossRate, winRate };
+}
+
 function renderMembers() {
   const colors = ['#1e3a5f', '#3b1f5f', '#5f1e3a', '#1e5f3a', '#5f3a1e', '#3a1e5f'];
   document.getElementById('memberCount').textContent = `${state.members.length} thành viên`;
-  
-  const lossMap = {};
-  state.fundPayments.forEach(p => {
-    const k = normName(p.member);
-    lossMap[k] = (lossMap[k] || 0) + 1;
-  });
 
-  const sorted = [...state.members].sort((a, b) => {
-    const la = lossMap[normName(a.name)] || 0;
-    const lb = lossMap[normName(b.name)] || 0;
-    return lb - la || a.name.localeCompare(b.name, 'vi');
+  const membersWithStats = state.members.map(m => ({
+    ...m,
+    stats: getMemberStats(m.name)
+  }));
+
+  const MIN_MATCHES = 3;
+  const sorted = membersWithStats.sort((a, b) => {
+    const aEnough = a.stats.played >= MIN_MATCHES ? 1 : 0;
+    const bEnough = b.stats.played >= MIN_MATCHES ? 1 : 0;
+    if (aEnough !== bEnough) return bEnough - aEnough;
+    return b.stats.lossRate - a.stats.lossRate || b.stats.losses - a.stats.losses || a.name.localeCompare(b.name, 'vi');
   });
 
   document.getElementById('memberList').innerHTML = sorted.map((m, i) => {
     const initials = safeInitial(m.name);
     const bg = colors[i % colors.length];
-    
-    const memberPayments = state.fundPayments.filter(p => normName(p.member) === normName(m.name));
-    const totalPaid = memberPayments.reduce((s, p) => s + p.amount, 0);
+    const s = m.stats;
     const safeName = String(m.name || '').replace(/'/g, "\\'");
-    
     const formGuide = getMemberRecentForm(m.name, 5);
+    const lrPct = s.played ? (s.lossRate * 100).toFixed(0) : '0';
+    const wrPct = s.played ? (s.winRate * 100).toFixed(0) : '0';
     
     return `<div class="member-card" onclick="openEditMember('${safeName}')">
       <div class="member-avatar" style="background:linear-gradient(135deg,${bg},${bg}cc)">${initials}</div>
       <div class="member-info">
         <div class="member-name">${m.name}</div>
-        <div class="member-meta" style="margin-top: 4px; display: flex; align-items: center; gap: 8px;">
-          <span>❌ Thua: ${memberPayments.length} trận</span>
-          <span>💰 Phạt: ${fmt(totalPaid)}đ</span>
+        <div class="member-meta" style="margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span>${s.played} trận</span>
+          <span style="color:#10b981">${s.wins}T</span>
+          <span style="color:#00ffff">${s.draws}H</span>
+          <span style="color:#ff005c">${s.losses}B</span>
+          <span style="color:${s.winRate >= 0.5 ? '#10b981' : '#ff005c'}">${wrPct}%</span>
         </div>
         <div class="member-form-row" style="margin-top: 6px; display: flex; gap: 4px;">
           ${formGuide}
@@ -944,7 +964,13 @@ function renderCharts() {
   }).filter(item => item.played > 0);
 
   // Sắp xếp theo số trận Thắng giảm dần, tiếp theo là Tỷ lệ thắng giảm dần
-  memberStackedData.sort((a, b) => b.win - a.win || b.winRate - a.winRate || a.name.localeCompare(b.name, 'vi'));
+  const MIN_MATCHES_CHART = 3;
+  memberStackedData.sort((a, b) => {
+    const aEnough = a.played >= MIN_MATCHES_CHART ? 1 : 0;
+    const bEnough = b.played >= MIN_MATCHES_CHART ? 1 : 0;
+    if (aEnough !== bEnough) return bEnough - aEnough;
+    return b.winRate - a.winRate || b.win - a.win || a.name.localeCompare(b.name, 'vi');
+  });
 
   const stackedLabels = memberStackedData.map(item => item.name);
   const winData = memberStackedData.map(item => item.win);

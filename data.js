@@ -1,4 +1,4 @@
-const DATA_VERSION = "buafc-2026-07-16-v7";
+const DATA_VERSION = "buafc-2026-07-16-v8";
 
 const INITIAL_MEMBERS = [
   { name: "Vũ Thế Anh", status: "active" },
@@ -45,7 +45,7 @@ const INITIAL_MATCHES = [
   { date: "2026-06-16", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Vũ Thế Anh", "Trịnh Minh Châm", "Nguyễn Minh"], playedTeam: ["Vũ Thế Anh", "Trịnh Minh Châm", "Nguyễn Minh", "Đoàn Thế Anh", "Phú Hà", "Nguyễn Quang Tuyên", "Hùng Chu", "Nguyễn Viết Hòa", "Trần Việt Hưng", "Trần Văn Tuấn", "Nguyễn Ngọc Quý", "Thai Nguyen", "Duy Phạm", "Phạm Tiến Hùng", "Trần Đức"] },
   { date: "2026-06-23", opponent: "Nội bộ", result: "Hòa", cost: 0, note: "Hòa 4-4", losingTeam: [], playedTeam: ["Tien Pham Duy", "Nguyễn Ngọc Quý", "Vũ Văn An", "Thai Nguyen", "Vũ Thế Anh", "Phú Hà", "Đoàn Thế Anh", "Trịnh Minh Châm", "Nguyễn Viết Hòa", "Trần Văn Tuấn", "Nguyễn Minh", "Trần Đức", "Phạm Tiến Hùng", "Ho Trong Thuan"] },
   { date: "2026-07-07", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Thai Nguyen", "Nguyễn Minh", "Nguyễn Khắc Dũng", "Trần Việt Hưng", "Trần Văn Tuấn", "Vũ Văn An"], playedTeam: ["Thai Nguyen", "Nguyễn Minh", "Nguyễn Khắc Dũng", "Trần Việt Hưng", "Trần Văn Tuấn", "Vũ Văn An", "Tien Pham Duy", "Nguyễn Ngọc Quý", "Phạm Tiến Hùng", "Trịnh Minh Châm", "Nguyễn Viết Hòa", "Duy Phạm", "Phạm Ngọc Tân"] },
-  { date: "2026-07-14", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Phú Hà", "Nguyễn Ngọc Quý", "Phạm Ngọc Tân"], playedTeam: ["Thai Nguyen", "Nguyễn Minh", "Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Vũ Thế Anh", "Nguyễn Khắc Dũng", "Quyền Ruốc", "Duy Dương", "Trần Đức", "Vũ Văn An", "Phú Hà", "Nguyễn Ngọc Quý", "Phạm Ngọc Tân"] }
+  { date: "2026-07-14", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Phú Hà", "Nguyễn Ngọc Quý"], playedTeam: ["Thai Nguyen", "Nguyễn Minh", "Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Vũ Thế Anh", "Nguyễn Khắc Dũng", "Quyền Ruốc", "Duy Dương", "Trần Đức", "Vũ Văn An", "Phú Hà", "Nguyễn Ngọc Quý"] }
 ];
 
 const INITIAL_FIXTURES = [];

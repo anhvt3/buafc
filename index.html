@@ -24,9 +24,9 @@
           <div class="header-subtitle">Quản lý phong độ & quỹ phạt</div>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <button onclick="importBackup()" title="Import từ file backup (.json hoặc .xlsx)" style="background:rgba(59,130,246,0.15); color:var(--info); border:1px solid var(--info); border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">📥 Import</button>
-          <button onclick="exportXLSX()" title="Tải XLSX 1 file 4 sheet" style="background:rgba(16,185,129,0.15); color:var(--win); border:1px solid var(--win); border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">📊 XLSX</button>
-          <button onclick="exportBackup()" title="Backup JSON đầy đủ" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">💾</button>
+          <button onclick="importBackup()" title="Import từ file backup (.json hoặc .xlsx)" style="background:rgba(59,130,246,0.15); color:var(--info); border:1px solid var(--info); border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">Import</button>
+          <button onclick="exportXLSX()" title="Tải XLSX 1 file 4 sheet" style="background:rgba(16,185,129,0.15); color:var(--win); border:1px solid var(--win); border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">XLSX</button>
+          <button onclick="exportBackup()" title="Backup JSON đầy đủ" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">Backup</button>
           <div class="sync-status" id="syncStatus" onclick="showSetup()">
             <span class="sync-dot" id="syncDot"></span>
             <span id="syncText">Đang kết nối...</span>
@@ -167,6 +167,10 @@
             <canvas id="memberStackedChart"></canvas>
           </div>
         </div>
+        <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
+          <div class="card-title" style="color: #ffaa00; letter-spacing: 1px;">🔥 CẶP BÀI TRÙNG & ĐỐI TÁC ĂN Ý</div>
+          <div class="pairs-analysis-container" id="pairsAnalysisContainer"></div>
+        </div>
       </div>
     </main>
 
@@ -186,6 +190,12 @@
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
         <span>Tổng quan</span>
+      </div>
+      <div class="nav-item" data-tab="tabCharts" onclick="switchTab(this)">
+        <svg viewBox="0 0 24 24">
+          <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span>Biểu đồ</span>
       </div>
       <div class="nav-item" data-tab="tabMatches" onclick="switchTab(this)">
         <svg viewBox="0 0 24 24">
@@ -219,12 +229,6 @@
           <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
         </svg>
         <span>Nhật ký</span>
-      </div>
-      <div class="nav-item" data-tab="tabCharts" onclick="switchTab(this)">
-        <svg viewBox="0 0 24 24">
-          <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-        <span>Biểu đồ</span>
       </div>
     </nav>
 

@@ -949,3 +949,74 @@ body {
  . r e s u l t - o p t i o n . a c t i v e . d r a w   {   b a c k g r o u n d :   r g b a ( 2 4 5 , 1 5 8 , 1 1 , 0 . 2 ) ;   b o r d e r - c o l o r :   # f 5 9 e 0 b ;   c o l o r :   # f 5 9 e 0 b ;   } 
   
  
+
+.pairs-analysis-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+}
+.pairs-subsection-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pairs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.duo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: var(--transition);
+}
+.duo-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.duo-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.duo-names-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.duo-and {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+.duo-stats {
+  text-align: right;
+}
+.duo-winrate {
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+.duo-winrate.best {
+  color: var(--win);
+}
+.duo-winrate.worst {
+  color: var(--lose);
+}
+.duo-detail {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}

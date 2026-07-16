@@ -678,14 +678,16 @@ function getMemberRecentForm(memberName, limit = 5) {
   
   sortedMatches.forEach(m => {
     const isCancelled = classifyResult(m.result) === 'cancelled';
+    if (isCancelled) return;
+
+    const played = m.playedTeam || [];
+    const inMatch = played.some(name => normName(name) === normName(memberName));
+    if (!inMatch) return;
+
     const isDraw = classifyResult(m.result) === 'draw';
-    
-    if (isCancelled) {
-      memberForm.push('<span class="form-badge cancelled" style="width:14px; height:14px; font-size:0.55rem; line-height:14px;">C</span>');
-    } else if (isDraw) {
+    if (isDraw) {
       memberForm.push('<span class="form-badge draw" style="width:14px; height:14px; font-size:0.55rem; line-height:14px;">D</span>');
     } else {
-      // It's a match with a losing team
       const isLose = m.losingTeam && m.losingTeam.some(name => normName(name) === normName(memberName));
       if (isLose) {
         memberForm.push('<span class="form-badge lose" style="width:14px; height:14px; font-size:0.55rem; line-height:14px;">L</span>');
@@ -1011,6 +1013,135 @@ function renderCharts() {
       }
     });
   }
+  renderPairs();
+}
+
+function renderPairs() {
+  const container = document.getElementById('pairsAnalysisContainer');
+  if (!container) return;
+
+  const membersList = state.members.map(m => m.name);
+  const pairs = {};
+
+  for (let i = 0; i < membersList.length; i++) {
+    for (let j = i + 1; j < membersList.length; j++) {
+      const p1 = membersList[i];
+      const p2 = membersList[j];
+      const key = p1 < p2 ? `${p1}_vs_${p2}` : `${p2}_vs_${p1}`;
+      pairs[key] = { p1, p2, together: 0, wins: 0, draws: 0, losses: 0 };
+    }
+  }
+
+  state.matches.forEach(m => {
+    const res = classifyResult(m.result);
+    if (res === 'cancelled') return;
+    const played = m.playedTeam || [];
+    const losers = m.losingTeam || [];
+    const isDraw = res === 'draw';
+
+    for (let i = 0; i < played.length; i++) {
+      for (let j = i + 1; j < played.length; j++) {
+        const p1 = played[i];
+        const p2 = played[j];
+        const key = p1 < p2 ? `${p1}_vs_${p2}` : `${p2}_vs_${p1}`;
+        if (pairs[key]) {
+          if (isDraw) {
+            pairs[key].together++;
+            pairs[key].draws++;
+          } else {
+            const p1Lost = losers.includes(p1);
+            const p2Lost = losers.includes(p2);
+            if (p1Lost === p2Lost) {
+              pairs[key].together++;
+              if (p1Lost) {
+                pairs[key].losses++;
+              } else {
+                pairs[key].wins++;
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const validPairs = Object.values(pairs).filter(p => p.together >= 3).map(p => {
+    const winRate = p.together ? (p.wins / p.together) * 100 : 0;
+    const ppg = p.together ? (p.wins * 3 + p.draws * 1) / p.together : 0;
+    return { ...p, winRate, ppg };
+  });
+
+  const bestPairs = [...validPairs].sort((a, b) => b.winRate - a.winRate || b.ppg - a.ppg || b.together - a.together);
+  const worstPairs = [...validPairs].sort((a, b) => a.winRate - b.winRate || a.ppg - b.ppg || a.together - b.together);
+
+  const vtaPartners = validPairs.filter(p => p.p1 === 'Vũ Thế Anh' || p.p2 === 'Vũ Thế Anh').map(p => {
+    const partner = p.p1 === 'Vũ Thế Anh' ? p.p2 : p.p1;
+    return { partner, ...p };
+  }).sort((a, b) => b.winRate - a.winRate || b.ppg - a.ppg || b.together - a.together);
+
+  const rowHTML = (p, idx, isBest) => {
+    const rateClass = isBest ? 'best' : 'worst';
+    return `<div class="duo-row">
+      <div class="duo-names">
+        <div class="duo-names-row">
+          <span>${p.p1}</span>
+          <span class="duo-and">&amp;</span>
+          <span>${p.p2}</span>
+        </div>
+        <div class="duo-detail">${p.together} trận · ${p.wins}T · ${p.draws}H · ${p.losses}B</div>
+      </div>
+      <div class="duo-stats">
+        <div class="duo-winrate ${rateClass}">${p.winRate.toFixed(1)}%</div>
+        <div class="duo-detail">PPG: ${p.ppg.toFixed(2)}</div>
+      </div>
+    </div>`;
+  };
+
+  const partnerRowHTML = (p, idx) => {
+    return `<div class="duo-row">
+      <div class="duo-names">
+        <div class="duo-names-row">
+          <span>${p.partner}</span>
+        </div>
+        <div class="duo-detail">${p.together} trận · ${p.wins}T · ${p.draws}H · ${p.losses}B cùng đội</div>
+      </div>
+      <div class="duo-stats">
+        <div class="duo-winrate best">${p.winRate.toFixed(1)}%</div>
+        <div class="duo-detail">PPG: ${p.ppg.toFixed(2)}</div>
+      </div>
+    </div>`;
+  };
+
+  let html = '';
+
+  html += `
+    <div class="pairs-subsection">
+      <div class="pairs-subsection-title">👑 TOP CẶP BÀI TRÙNG ĂN Ý NHẤT</div>
+      <div class="pairs-list">
+        ${bestPairs.slice(0, 3).map((p, idx) => rowHTML(p, idx, true)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
+      </div>
+    </div>
+  `;
+
+  html += `
+    <div class="pairs-subsection" style="margin-top: 10px;">
+      <div class="pairs-subsection-title">⚠️ TOP CẶP THI ĐẤU KÉM ĂN Ý</div>
+      <div class="pairs-list">
+        ${worstPairs.slice(0, 3).map((p, idx) => rowHTML(p, idx, false)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
+      </div>
+    </div>
+  `;
+
+  html += `
+    <div class="pairs-subsection" style="margin-top: 10px;">
+      <div class="pairs-subsection-title">🔥 BẠN DIỄN ĂN Ý CỦA VŨ THẾ ANH</div>
+      <div class="pairs-list">
+        ${vtaPartners.slice(0, 3).map((p, idx) => partnerRowHTML(p, idx)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
 }
 
 async function saveMatch(btn) {

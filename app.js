@@ -789,6 +789,8 @@ let costResultBarChart = null;
 let memberStackedChart = null;
 let memberPercentStackedChart = null;
 let showAllPenalties = false;
+let showAllStacked = false;
+let showAllPercent = false;
 
 function togglePenaltiesShow() {
   showAllPenalties = !showAllPenalties;
@@ -798,8 +800,29 @@ function togglePenaltiesShow() {
   }
   renderCharts();
 }
+
+function toggleStackedShow() {
+  showAllStacked = !showAllStacked;
+  const btn = document.getElementById('toggleStackedBtn');
+  if (btn) {
+    btn.innerHTML = showAllStacked ? 'Thu gọn <span id="toggleStackedArrow">▲</span>' : 'Xem tất cả <span id="toggleStackedArrow">▼</span>';
+  }
+  renderCharts();
+}
+
+function togglePercentShow() {
+  showAllPercent = !showAllPercent;
+  const btn = document.getElementById('togglePercentBtn');
+  if (btn) {
+    btn.innerHTML = showAllPercent ? 'Thu gọn <span id="togglePercentArrow">▲</span>' : 'Xem tất cả <span id="togglePercentArrow">▼</span>';
+  }
+  renderCharts();
+}
+
 if (typeof window !== 'undefined') {
   window.togglePenaltiesShow = togglePenaltiesShow;
+  window.toggleStackedShow = toggleStackedShow;
+  window.togglePercentShow = togglePercentShow;
 }
 
 function renderCharts() {
@@ -903,7 +926,10 @@ function renderCharts() {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi'));
 
   const displayStats = showAllPenalties ? sortedStats : sortedStats.slice(0, 10);
-  const barLabels = displayStats.map(item => item[0]);
+  const barLabels = displayStats.map((item, idx) => {
+    const rank = sortedStats.findIndex(x => x[0] === item[0]) + 1;
+    return `${rank}. ${item[0]}`;
+  });
   const barData = displayStats.map(item => item[1]);
 
   const ctxBar = document.getElementById('costResultBarChart');
@@ -987,10 +1013,14 @@ function renderCharts() {
     return b.winRate - a.winRate || b.win - a.win || a.name.localeCompare(b.name, 'vi');
   });
 
-  const stackedLabels = memberStackedData.map(item => item.name);
-  const winData = memberStackedData.map(item => item.win);
-  const drawData = memberStackedData.map(item => item.draw);
-  const loseData = memberStackedData.map(item => item.lose);
+  const displayStacked = showAllStacked ? memberStackedData : memberStackedData.slice(0, 10);
+  const stackedLabels = displayStacked.map(item => {
+    const rank = memberStackedData.findIndex(x => x.name === item.name) + 1;
+    return `${rank}. ${item.name}`;
+  });
+  const winData = displayStacked.map(item => item.win);
+  const drawData = displayStacked.map(item => item.draw);
+  const loseData = displayStacked.map(item => item.lose);
 
   const ctxStacked = document.getElementById('memberStackedChart');
   if (memberStackedChart) memberStackedChart.destroy();
@@ -1056,40 +1086,45 @@ function renderCharts() {
   }
 
   // 4. Biểu đồ 100% Stacked Bar Chart tỷ lệ % thắng - hòa - thua
-  const winPercentData = memberStackedData.map(item => (item.win / item.played) * 100);
-  const drawPercentData = memberStackedData.map(item => (item.draw / item.played) * 100);
-  const losePercentData = memberStackedData.map(item => (item.lose / item.played) * 100);
+  const displayPercent = showAllPercent ? memberStackedData : memberStackedData.slice(0, 10);
+  const percentLabels = displayPercent.map(item => {
+    const rank = memberStackedData.findIndex(x => x.name === item.name) + 1;
+    return `${rank}. ${item.name}`;
+  });
+  const winPercentData = displayPercent.map(item => (item.win / item.played) * 100);
+  const drawPercentData = displayPercent.map(item => (item.draw / item.played) * 100);
+  const losePercentData = displayPercent.map(item => (item.lose / item.played) * 100);
 
   const ctxPercent = document.getElementById('memberPercentStackedChart');
   if (memberPercentStackedChart) memberPercentStackedChart.destroy();
   if (ctxPercent) {
-    ctxPercent.parentNode.style.height = (stackedLabels.length * 28 + 45) + 'px';
+    ctxPercent.parentNode.style.height = (percentLabels.length * 28 + 45) + 'px';
     memberPercentStackedChart = new Chart(ctxPercent, {
       type: 'bar',
       data: {
-        labels: stackedLabels,
+        labels: percentLabels,
         datasets: [
           {
             label: 'Thắng (%)',
             data: winPercentData,
-            rawCounts: memberStackedData.map(item => item.win),
-            totalMatches: memberStackedData.map(item => item.played),
+            rawCounts: displayPercent.map(item => item.win),
+            totalMatches: displayPercent.map(item => item.played),
             backgroundColor: '#10b981',
             borderRadius: 4
           },
           {
             label: 'Hòa (%)',
             data: drawPercentData,
-            rawCounts: memberStackedData.map(item => item.draw),
-            totalMatches: memberStackedData.map(item => item.played),
+            rawCounts: displayPercent.map(item => item.draw),
+            totalMatches: displayPercent.map(item => item.played),
             backgroundColor: '#00ffff',
             borderRadius: 4
           },
           {
             label: 'Thua (%)',
             data: losePercentData,
-            rawCounts: memberStackedData.map(item => item.lose),
-            totalMatches: memberStackedData.map(item => item.played),
+            rawCounts: displayPercent.map(item => item.lose),
+            totalMatches: displayPercent.map(item => item.played),
             backgroundColor: '#ef4444',
             borderRadius: 4
           }

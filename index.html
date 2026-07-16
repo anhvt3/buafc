@@ -155,20 +155,31 @@
           </div>
         </div>
         <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
-          <div class="card-title" style="color: #ff005c; letter-spacing: 1px;">XẾP HẠNG PHẠT THUA THÀNH VIÊN</div>
-          <div class="chart-container" style="height: 350px; padding-top: 10px;">
-            <canvas id="costResultBarChart"></canvas>
-          </div>
-        </div>
-        <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
           <div class="card-title" style="color: #00ff85; letter-spacing: 1px;">THỐNG KÊ PHONG ĐỘ CHI TIẾT THÀNH VIÊN</div>
           <div class="chart-container" style="height: 500px; padding-top: 10px;">
             <canvas id="memberStackedChart"></canvas>
           </div>
         </div>
         <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
+          <div class="card-title" style="color: #00ffff; letter-spacing: 1px;">TỶ LỆ % THẮNG - HÒA - THUA CHI TIẾT</div>
+          <div class="chart-container" style="height: 500px; padding-top: 10px;">
+            <canvas id="memberPercentStackedChart"></canvas>
+          </div>
+        </div>
+        <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
           <div class="card-title" style="color: #ffaa00; letter-spacing: 1px;">🔥 CẶP BÀI TRÙNG & ĐỐI TÁC ĂN Ý</div>
           <div class="pairs-analysis-container" id="pairsAnalysisContainer"></div>
+        </div>
+        <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
+          <div class="card-title" style="color: #ff005c; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;">
+            <span>XẾP HẠNG PHẠT THUA THÀNH VIÊN</span>
+            <button id="togglePenaltiesBtn" onclick="togglePenaltiesShow()" style="background: none; border: none; color: #ff005c; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 4px; transition: background 0.2s;">
+              Xem tất cả <span id="togglePenaltiesArrow">▼</span>
+            </button>
+          </div>
+          <div class="chart-container" style="height: 350px; padding-top: 10px;">
+            <canvas id="costResultBarChart"></canvas>
+          </div>
         </div>
       </div>
     </main>

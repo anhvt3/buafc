@@ -787,6 +787,20 @@ function renderLog() {
 let formLineChart = null;
 let costResultBarChart = null;
 let memberStackedChart = null;
+let memberPercentStackedChart = null;
+let showAllPenalties = false;
+
+function togglePenaltiesShow() {
+  showAllPenalties = !showAllPenalties;
+  const btn = document.getElementById('togglePenaltiesBtn');
+  if (btn) {
+    btn.innerHTML = showAllPenalties ? 'Thu gọn <span id="togglePenaltiesArrow">▲</span>' : 'Xem tất cả <span id="togglePenaltiesArrow">▼</span>';
+  }
+  renderCharts();
+}
+if (typeof window !== 'undefined') {
+  window.togglePenaltiesShow = togglePenaltiesShow;
+}
 
 function renderCharts() {
   // --- Form Guide (5 Trận Gần Nhất cả đội) ---
@@ -888,8 +902,9 @@ function renderCharts() {
     .filter(item => item[1] > 0)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi'));
 
-  const barLabels = sortedStats.map(item => item[0]);
-  const barData = sortedStats.map(item => item[1]);
+  const displayStats = showAllPenalties ? sortedStats : sortedStats.slice(0, 10);
+  const barLabels = displayStats.map(item => item[0]);
+  const barData = displayStats.map(item => item[1]);
 
   const ctxBar = document.getElementById('costResultBarChart');
   if (costResultBarChart) costResultBarChart.destroy();
@@ -1039,6 +1054,90 @@ function renderCharts() {
       }
     });
   }
+
+  // 4. Biểu đồ 100% Stacked Bar Chart tỷ lệ % thắng - hòa - thua
+  const winPercentData = memberStackedData.map(item => (item.win / item.played) * 100);
+  const drawPercentData = memberStackedData.map(item => (item.draw / item.played) * 100);
+  const losePercentData = memberStackedData.map(item => (item.lose / item.played) * 100);
+
+  const ctxPercent = document.getElementById('memberPercentStackedChart');
+  if (memberPercentStackedChart) memberPercentStackedChart.destroy();
+  if (ctxPercent) {
+    ctxPercent.parentNode.style.height = (stackedLabels.length * 28 + 45) + 'px';
+    memberPercentStackedChart = new Chart(ctxPercent, {
+      type: 'bar',
+      data: {
+        labels: stackedLabels,
+        datasets: [
+          {
+            label: 'Thắng (%)',
+            data: winPercentData,
+            rawCounts: memberStackedData.map(item => item.win),
+            totalMatches: memberStackedData.map(item => item.played),
+            backgroundColor: '#10b981',
+            borderRadius: 4
+          },
+          {
+            label: 'Hòa (%)',
+            data: drawPercentData,
+            rawCounts: memberStackedData.map(item => item.draw),
+            totalMatches: memberStackedData.map(item => item.played),
+            backgroundColor: '#00ffff',
+            borderRadius: 4
+          },
+          {
+            label: 'Thua (%)',
+            data: losePercentData,
+            rawCounts: memberStackedData.map(item => item.lose),
+            totalMatches: memberStackedData.map(item => item.played),
+            backgroundColor: '#ef4444',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#9ca3af', font: { size: 10 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const dataset = context.dataset;
+                const percent = context.raw.toFixed(1);
+                const rawCount = dataset.rawCounts[context.dataIndex];
+                const total = dataset.totalMatches[context.dataIndex];
+                return ` ${dataset.label.replace(' (%)', '')}: ${percent}% (${rawCount}/${total} trận)`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            min: 0,
+            max: 100,
+            ticks: { 
+              color: '#9ca3af', 
+              font: { size: 9 },
+              callback: function(value) { return value + '%'; }
+            },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          },
+          y: {
+            stacked: true,
+            ticks: { color: '#9ca3af', font: { size: 9 }, autoSkip: false },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
   renderPairs();
 }
 

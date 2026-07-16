@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Bựa FC - Phong Độ & Quỹ Phạt</title>
+  <meta name="description" content="Ứng dụng quản lý phong độ thi đấu và quỹ phạt trận thua của Bựa FC">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-top">
+        <div>
+          <h1>⚽ Bựa FC</h1>
+          <div class="header-subtitle">Quản lý phong độ & quỹ phạt</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button onclick="importBackup()" title="Import từ file backup (.json hoặc .xlsx)" style="background:rgba(59,130,246,0.15); color:var(--info); border:1px solid var(--info); border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">📥 Import</button>
+          <button onclick="exportXLSX()" title="Tải XLSX 1 file 4 sheet" style="background:rgba(16,185,129,0.15); color:var(--win); border:1px solid var(--win); border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">📊 XLSX</button>
+          <button onclick="exportBackup()" title="Backup JSON đầy đủ" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; border-radius:8px; padding:4px 8px; font-size:0.7rem; cursor:pointer; font-weight:700;">💾</button>
+          <div class="sync-status" id="syncStatus" onclick="showSetup()">
+            <span class="sync-dot" id="syncDot"></span>
+            <span id="syncText">Đang kết nối...</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content area -->
+    <main class="content" id="mainContent">
+      <!-- Dashboard Tab -->
+      <div class="tab-panel active" id="tabDashboard">
+        <div class="stats-grid">
+          <div class="stat-card" onclick="goToTab('tabFund')" style="cursor: pointer;">
+            <div class="stat-value" id="statBalance">0đ</div>
+            <div class="stat-label" id="statBalanceLabel">Quỹ phạt dự kiến</div>
+          </div>
+          <div class="stat-card" onclick="goToTab('tabMatches')" style="cursor: pointer;">
+            <div class="stat-value" id="statMatches">0</div>
+            <div class="stat-label">Trận đã đấu</div>
+          </div>
+          <div class="stat-card" onclick="goToTab('tabMembers')" style="cursor: pointer;">
+            <div class="stat-value" id="statMembers">0</div>
+            <div class="stat-label">Thành viên</div>
+          </div>
+          <div class="stat-card" onclick="goToTab('tabFund')" style="cursor: pointer;">
+            <div class="stat-value" id="statTotalFund">0đ</div>
+            <div class="stat-label">Tổng quỹ đã thu</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">THỐNG KÊ KẾT QUẢ 15 TRẬN GẦN ĐÂY</div>
+          <div class="donut-container" onclick="goToTab('tabCharts')" style="cursor: pointer;" title="Xem chi tiết biểu đồ">
+            <canvas id="winRateChart" class="donut-chart" width="100" height="100"></canvas>
+            <div class="donut-legend" id="winRateLegend"></div>
+          </div>
+        </div>
+
+        <div class="card" onclick="openMonthlyReport()" style="cursor: pointer;" title="Xem báo cáo phạt theo tháng">
+          <div class="card-title">Phạt thu theo tháng <span style="float:right; font-size:0.7rem; color:var(--text-muted)">▸ chi tiết</span></div>
+          <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </div>
+
+        <div class="section-title">
+          Trận gần đây
+          <span class="count" id="recentCount"></span>
+        </div>
+        <div id="recentMatches"></div>
+      </div>
+
+      <!-- Matches Tab -->
+      <div class="tab-panel" id="tabMatches">
+        <div class="month-selector" id="matchMonthSelector"></div>
+        <div class="summary-bar" id="matchSummary">
+          <div class="summary-item">
+            <div class="summary-value neutral" id="sumTotalMatches">0</div>
+            <div class="summary-label">TỔNG TRẬN</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value positive" id="sumWins" style="display:none">0</div>
+            <div class="summary-value positive" id="sumPlay">16</div>
+            <div class="summary-label">ĐÃ ĐÁ</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value negative" id="sumLosses" style="display:none">0</div>
+            <div class="summary-value negative" id="sumFines">0</div>
+            <div class="summary-label font-bold">LƯỢT PHẠT</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value" id="sumCost">0đ</div>
+            <div class="summary-label">QUỸ PHẠT</div>
+          </div>
+        </div>
+        <div id="matchList"></div>
+      </div>
+
+      <!-- Fund Tab -->
+      <div class="tab-panel" id="tabFund">
+        <div class="period-header">
+          <div class="period-nav">
+            <span class="period-label" id="fundPeriodLabel">Quỹ Phạt Trận Thua (20K/Trận)</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.1rem;font-weight:800;color:var(--accent)" id="fundPeriodTotal">0đ</div>
+            <div style="font-size:0.65rem;color:var(--text-muted)">TỔNG TIỀN PHẠT</div>
+          </div>
+        </div>
+        <div id="fundList"></div>
+      </div>
+
+      <!-- Members Tab -->
+      <div class="tab-panel" id="tabMembers">
+        <div class="section-title">
+          Danh sách thành viên
+          <span class="count" id="memberCount"></span>
+        </div>
+        <div id="memberList"></div>
+      </div>
+
+      <!-- Log Tab -->
+      <div class="tab-panel" id="tabLog">
+        <div class="section-title">
+          Nhật ký trận đấu
+          <span class="count" id="logMatchCount"></span>
+        </div>
+        <div id="logTimeline"></div>
+      </div>
+
+      <!-- Charts Tab -->
+      <div class="tab-panel" id="tabCharts">
+        <div class="section-title">
+          Biểu đồ phân tích phong độ
+        </div>
+        <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824); border: 1px solid #37003c;">
+          <div class="card-title" style="color: #00ff85; letter-spacing: 1px;">PHONG ĐỘ 5 TRẬN GẦN NHẤT</div>
+          <div class="form-guide" id="recentFormGuide">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
+          <div class="card-title" style="color: #00ffff; letter-spacing: 1px;">QUỸ ĐẠO KẾT QUẢ TRẬN (16 TRẬN)</div>
+          <div class="chart-container" style="height: 250px; padding-top: 10px;">
+            <canvas id="formLineChart"></canvas>
+          </div>
+        </div>
+        <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
+          <div class="card-title" style="color: #ff005c; letter-spacing: 1px;">XẾP HẠNG PHẠT THUA THÀNH VIÊN</div>
+          <div class="chart-container" style="height: 350px; padding-top: 10px;">
+            <canvas id="costResultBarChart"></canvas>
+          </div>
+        </div>
+        <div class="card" style="background: linear-gradient(145deg, #1e2233, #151824);">
+          <div class="card-title" style="color: #00ff85; letter-spacing: 1px;">THỐNG KÊ PHONG ĐỘ CHI TIẾT THÀNH VIÊN</div>
+          <div class="chart-container" style="height: 500px; padding-top: 10px;">
+            <canvas id="memberStackedChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- FAB -->
+    <button class="fab" id="fab" onclick="handleFabClick()">
+      <svg viewBox="0 0 24 24">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    </button>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" data-tab="tabDashboard" onclick="switchTab(this)">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+        <span>Tổng quan</span>
+      </div>
+      <div class="nav-item" data-tab="tabMatches" onclick="switchTab(this)">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+        </svg>
+        <span>Trận đấu</span>
+      </div>
+      <div class="nav-item" data-tab="tabFund" onclick="switchTab(this)">
+        <svg viewBox="0 0 24 24">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <line x1="2" y1="10" x2="22" y2="10" />
+        </svg>
+        <span>Quỹ phạt</span>
+      </div>
+      <div class="nav-item" data-tab="tabMembers" onclick="switchTab(this)">
+        <svg viewBox="0 0 24 24">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 00-3-3.87" />
+          <path d="M16 3.13a4 4 0 010 7.75" />
+        </svg>
+        <span>Thành viên</span>
+      </div>
+      <div class="nav-item" data-tab="tabLog" onclick="switchTab(this)">
+        <svg viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" fill="none" stroke="currentColor" stroke-width="2"/>
+          <polyline points="14 2 14 8 20 8" fill="none" stroke="currentColor" stroke-width="2"/>
+          <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
+          <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span>Nhật ký</span>
+      </div>
+      <div class="nav-item" data-tab="tabCharts" onclick="switchTab(this)">
+        <svg viewBox="0 0 24 24">
+          <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span>Biểu đồ</span>
+      </div>
+    </nav>
+
+    <!-- Add Match Modal -->
+    <div class="modal-overlay" id="modalMatch">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <h2>⚽ Thêm trận đấu</h2>
+        <div class="form-group">
+          <label class="form-label">Ngày thi đấu</label>
+          <input type="date" class="form-input" id="matchDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Loại trận</label>
+          <input type="text" class="form-input" id="matchOpponent" value="Nội bộ" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sân bóng</label>
+          <input type="text" class="form-input" id="matchVenue" placeholder="VD: Athena Đại Mỗ">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kết quả</label>
+          <div class="result-selector">
+            <div class="result-option lose active" onclick="selectResult('Thua', this)">Đá xong (Có đội thua) ❌</div>
+            <div class="result-option draw" onclick="selectResult('Hòa', this)">Hòa 🤝</div>
+            <div class="result-option draw" onclick="selectResult('Hoãn', this)">Mưa hoãn 🌧️</div>
+          </div>
+          <input type="hidden" id="matchResult" value="Thua">
+        </div>
+        <div class="form-group" id="losingTeamGroup">
+          <label class="form-label">Thành viên đội thua cuộc (Chọn nhiều)</label>
+          <div class="member-checkbox-list" id="matchLosingTeamCheckboxes" style="max-height: 150px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ghi chú</label>
+          <input type="text" class="form-input" id="matchNote" placeholder="Ghi chú thêm...">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-secondary" onclick="closeModal('modalMatch')" style="flex:1">Hủy</button>
+          <button class="btn btn-primary" onclick="saveMatch()" style="flex:2">Lưu trận đấu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Fund Modal -->
+    <div class="modal-overlay" id="modalFund">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <h2>💰 Ghi nhận đóng phạt</h2>
+        <div class="form-group" style="display:none">
+          <label class="form-label">Đợt</label>
+          <select class="form-select" id="fundPeriod">
+            <option value="Phạt thua" selected>Phạt thua</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Thành viên đóng phạt</label>
+          <select class="form-select" id="fundMember"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số tiền phạt (VNĐ)</label>
+          <input type="number" class="form-input" id="fundAmount" placeholder="20000" value="20000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ghi chú</label>
+          <input type="text" class="form-input" id="fundNote" placeholder="Phạt trận ngày...">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-secondary" onclick="closeModal('modalFund')" style="flex:1">Hủy</button>
+          <button class="btn btn-primary" onclick="saveFund()" style="flex:2">Xác nhận nộp</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div class="modal-overlay" id="modalMember">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <h2>👤 Thêm thành viên</h2>
+        <div class="form-group">
+          <label class="form-label">Họ tên</label>
+          <input type="text" class="form-input" id="memberName" placeholder="Nguyễn Văn A">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-secondary" onclick="closeModal('modalMember')" style="flex:1">Hủy</button>
+          <button class="btn btn-primary" onclick="saveMember()" style="flex:2">Thêm thành viên</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Match Modal -->
+    <div class="modal-overlay" id="modalMatchEdit">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <h2>✏️ Sửa trận đấu</h2>
+        <input type="hidden" id="editMatchId">
+        <div class="form-group">
+          <label class="form-label">Ngày thi đấu</label>
+          <input type="date" class="form-input" id="editMatchDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Loại trận</label>
+          <input type="text" class="form-input" id="editMatchOpponent" value="Nội bộ" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sân bóng</label>
+          <input type="text" class="form-input" id="editMatchVenue">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kết quả</label>
+          <div class="result-selector">
+            <div class="result-option lose" onclick="selectEditResult('Thua', this)">Đá xong (Có đội thua) ❌</div>
+            <div class="result-option draw" onclick="selectEditResult('Hòa', this)">Hòa 🤝</div>
+            <div class="result-option draw" onclick="selectEditResult('Hoãn', this)">Mưa hoãn 🌧️</div>
+          </div>
+          <input type="hidden" id="editMatchResult" value="">
+        </div>
+        <div class="form-group" id="editLosingTeamGroup">
+          <label class="form-label">Thành viên đội thua cuộc (Chọn nhiều)</label>
+          <div class="member-checkbox-list" id="editMatchLosingTeamCheckboxes" style="max-height: 150px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ghi chú</label>
+          <input type="text" class="form-input" id="editMatchNote">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-secondary" onclick="deleteMatch()"
+            style="flex:1;background:rgba(239,68,68,0.2);color:#ef4444;border-color:transparent">Xóa</button>
+          <button class="btn btn-primary" onclick="updateMatch()" style="flex:2">Lưu thay đổi</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Member Modal -->
+    <div class="modal-overlay" id="modalMemberEdit">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <h2>✏️ Cập nhật thành viên</h2>
+        <input type="hidden" id="editMemberOriginalName">
+        <div class="form-group">
+          <label class="form-label">Họ tên</label>
+          <input type="text" class="form-input" id="editMemberName">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Trạng thái</label>
+          <select class="form-select" id="editMemberStatus">
+            <option value="active">Hoạt động</option>
+            <option value="paused">Tạm nghỉ</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-secondary" onclick="deleteMember()"
+            style="flex:1;background:rgba(239,68,68,0.2);color:#ef4444;border-color:transparent">Xóa</button>
+          <button class="btn btn-primary" onclick="updateMember()" style="flex:2">Lưu thay đổi</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Setup Modal -->
+    <div class="modal-overlay" id="modalSetup">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <div class="setup-screen">
+          <h2>🔗 Kết nối Google Sheets</h2>
+          <p>Nhập URL của Google Apps Script Web App để đồng bộ dữ liệu với Google Sheets.</p>
+          <div class="setup-steps">
+            <div class="setup-step">
+              <div class="step-number">1</div>
+              <div class="step-text">Mở Google Sheet → Extensions → Apps Script</div>
+            </div>
+            <div class="setup-step">
+              <div class="step-number">2</div>
+              <div class="step-text">Dán code Apps Script (có sẵn trong file Code.gs)</div>
+            </div>
+            <div class="setup-step">
+              <div class="step-number">3</div>
+              <div class="step-text">Deploy → New deployment → Web App → Copy URL</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <input type="text" class="form-input" id="apiUrl" placeholder="https://script.google.com/macros/s/...">
+          </div>
+          <button class="btn btn-primary" onclick="connectApi()" style="margin-bottom:10px">Kết nối</button>
+          <button class="btn btn-secondary" onclick="closeModal('modalSetup')">Dùng offline trước</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Report Modal -->
+    <div class="modal-overlay" id="modalMonthlyReport">
+      <div class="modal modal-report">
+        <div class="modal-handle"></div>
+        <h2 id="reportTitle">📊 Báo cáo phạt theo tháng</h2>
+        <div class="report-chips" id="reportChips"></div>
+
+        <div class="report-card report-card-thu">
+          <div class="report-card-head">
+            <span class="report-card-label">📈 TỔNG TIỀN PHẠT THU</span>
+            <span class="report-card-meta" id="reportThuCount">—</span>
+          </div>
+          <div class="report-card-value positive" id="reportThu">0đ</div>
+          <div class="report-list" id="reportThuList"></div>
+        </div>
+        <button class="btn btn-secondary" onclick="closeModal('modalMonthlyReport')" style="width:100%; margin-top:16px">Đóng</button>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

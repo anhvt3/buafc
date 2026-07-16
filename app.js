@@ -1132,8 +1132,6 @@ function renderPairs() {
       </div>
     </div>
   `;
-
-  container.innerHTML = html;
 }
 
 async function saveMatch(btn) {

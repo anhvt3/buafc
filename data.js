@@ -1,4 +1,4 @@
-const DATA_VERSION = "buafc-2026-07-16-v4";
+const DATA_VERSION = "buafc-2026-07-16-v5";
 
 const INITIAL_MEMBERS = [
   { name: "Vũ Thế Anh", status: "active" },
@@ -44,7 +44,7 @@ const INITIAL_MATCHES = [
   { date: "2026-06-16", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Vũ Thế Anh", "Trịnh Minh Châm", "Nguyễn Minh"], playedTeam: ["Vũ Thế Anh", "Trịnh Minh Châm", "Nguyễn Minh", "Đoàn Thế Anh", "Phú Hà", "Nguyễn Quang Tuyên", "Hùng Chu", "Nguyễn Viết Hòa", "Trần Việt Hưng", "Trần Văn Tuấn", "Nguyễn Ngọc Quý", "Thai Nguyen", "Duy Phạm", "Phạm Tiến Hùng", "Vũ Văn An", "Trần Đức"] },
   { date: "2026-06-23", opponent: "Nội bộ", result: "Hòa", cost: 0, note: "Hòa 4-4", losingTeam: [], playedTeam: ["Quyền Ruốc", "Tien Pham Duy", "Nguyễn Ngọc Quý", "Vũ Văn An", "Thai Nguyen", "Vũ Thế Anh", "Phú Hà", "Đoàn Thế Anh", "Nguyễn Quang Tuyên", "Trịnh Minh Châm", "Hùng Chu", "Nguyễn Viết Hòa", "Trần Việt Hưng", "Trần Văn Tuấn"] },
   { date: "2026-07-07", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Thai Nguyen", "Vũ Thế Anh", "Nguyễn Minh", "Nguyễn Khắc Dũng", "Trần Việt Hưng", "Trần Văn Tuấn", "Vũ Văn An"], playedTeam: ["Thai Nguyen", "Nguyễn Minh", "Nguyễn Khắc Dũng", "Trần Việt Hưng", "Trần Văn Tuấn", "Vũ Văn An", "Vũ Thế Anh", "Tien Pham Duy", "Nguyễn Ngọc Quý", "Phạm Tiến Hùng", "Phú Hà", "Trịnh Minh Châm", "Nguyễn Viết Hòa", "Duy Phạm"] },
-  { date: "2026-07-14", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Nguyễn Viết Hòa", "Trần Văn Tuấn"], playedTeam: ["Thai Nguyen", "Nguyễn Minh", "Nguyễn Viết Hòa", "Trần Văn Tuấn"] }
+  { date: "2026-07-14", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng"], playedTeam: ["Thai Nguyen", "Nguyễn Minh", "Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Vũ Thế Anh", "Nguyễn Khắc Dũng", "Quyền Ruốc", "Duy Dương", "Trần Đức", "Vũ Văn An"] }
 ];
 
 const INITIAL_FIXTURES = [];

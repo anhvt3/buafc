@@ -37,6 +37,11 @@ html {
 body {
   font-family: 'Outfit', -apple-system, sans-serif;
   background: var(--bg-primary);
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center top;
   color: var(--text-primary);
   min-height: 100dvh;
   overflow-x: hidden;
@@ -662,14 +667,19 @@ h1, h2, h3, .stat-value, .stat-label, .period-total, .quarter-summary-title,
   transform: skewX(-8deg) translateY(-2px);
 }
 
-/* Section title */
 .section-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  margin-bottom: 12px;
+  font-size: 0.95rem;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transform: skewX(-6deg);
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
 }
 
 .section-title .count {

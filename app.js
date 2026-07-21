@@ -1,5 +1,6 @@
 let state = {
   members: [], matches: [], fundPayments: [],
+  quarterlyContributions: [], expenses: [],
   currentTab: 'tabDashboard',
   selectedMonth: 'all',
   pendingWrites: 0,
@@ -27,13 +28,15 @@ function init() {
   state.apiUrl = localStorage.getItem('fc_api_url') || DEFAULT_API_URL;
   try {
     if (typeof DATA_VERSION !== 'undefined' && localStorage.getItem('fc_data_version') !== DATA_VERSION) {
-      ['fc_members', 'fc_matches', 'fc_fund'].forEach(k => localStorage.removeItem(k));
+      ['fc_members', 'fc_matches', 'fc_fund', 'fc_quarterly_contributions', 'fc_expenses'].forEach(k => localStorage.removeItem(k));
       localStorage.setItem('fc_data_version', DATA_VERSION);
     }
   } catch (e) { /* localStorage blocked */ }
   state.members = safeParse('fc_members', null) || [...INITIAL_MEMBERS];
   state.matches = safeParse('fc_matches', null) || [...INITIAL_MATCHES];
   state.fundPayments = safeParse('fc_fund', null) || [...INITIAL_FUND_PAYMENTS];
+  state.quarterlyContributions = safeParse('fc_quarterly_contributions', null) || [...INITIAL_QUARTERLY_CONTRIBUTIONS];
+  state.expenses = safeParse('fc_expenses', null) || [...INITIAL_EXPENSES];
   
   updateSyncStatus();
   renderAll();
@@ -125,6 +128,8 @@ function save() {
     localStorage.setItem('fc_members', JSON.stringify(state.members));
     localStorage.setItem('fc_matches', JSON.stringify(state.matches));
     localStorage.setItem('fc_fund', JSON.stringify(state.fundPayments));
+    localStorage.setItem('fc_quarterly_contributions', JSON.stringify(state.quarterlyContributions));
+    localStorage.setItem('fc_expenses', JSON.stringify(state.expenses));
   } catch (e) {
     console.error('localStorage save failed:', e.name, e.message);
     if (!_saveWarnShown) {
@@ -231,8 +236,13 @@ function handleFabClick() {
     populateLosingTeamCheckboxes('matchLosingTeamCheckboxes');
     openModal('modalMatch');
   } else if (tab === 'tabFund') {
-    populateFundModal();
-    openModal('modalFund');
+    if (state.currentSubTab === 'subtabSummary') {
+      populateExpenseModal();
+      openModal('modalExpense');
+    } else {
+      populateFundModal();
+      openModal('modalFund');
+    }
   } else if (tab === 'tabMembers') {
     document.getElementById('memberName').value = '';
     openModal('modalMember');
@@ -267,10 +277,14 @@ function exportBackup() {
     members: state.members,
     matches: state.matches,
     fundPayments: state.fundPayments,
+    quarterlyContributions: state.quarterlyContributions,
+    expenses: state.expenses,
     counts: {
       members: (state.members || []).length,
       matches: (state.matches || []).length,
       fundPayments: (state.fundPayments || []).length,
+      quarterlyContributions: (state.quarterlyContributions || []).length,
+      expenses: (state.expenses || []).length,
     },
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -282,7 +296,7 @@ function exportBackup() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast(`Đã tải backup: ${data.counts.members}m / ${data.counts.matches}t / ${data.counts.fundPayments}q`, 'success');
+  showToast(`Đã tải backup: ${data.counts.members}m / ${data.counts.matches}t / ${data.counts.fundPayments}q / ${data.counts.quarterlyContributions}đ / ${data.counts.expenses}c`, 'success');
 }
 if (typeof window !== 'undefined') {
   window.exportBackup = exportBackup;
@@ -319,7 +333,9 @@ function exportCSV() {
   const files = [
     { name: `buafc-members-${ts}.csv`, rows: state.members || [], cols: ['name', 'status'] },
     { name: `buafc-matches-${ts}.csv`, rows: state.matches || [], cols: ['date', 'opponent', 'result', 'note'] },
-    { name: `buafc-fund-${ts}.csv`, rows: state.fundPayments || [], cols: ['timestamp', 'period', 'member', 'amount', 'note'] }
+    { name: `buafc-fund-${ts}.csv`, rows: state.fundPayments || [], cols: ['timestamp', 'period', 'member', 'amount', 'note'] },
+    { name: `buafc-quarterly-${ts}.csv`, rows: state.quarterlyContributions || [], cols: ['member', 'q1_amount', 'q1_date', 'q2_amount', 'q2_date', 'q3_amount', 'q3_date', 'q4_amount', 'q4_date'] },
+    { name: `buafc-expenses-${ts}.csv`, rows: state.expenses || [], cols: ['name', 'quarter', 'year', 'amount', 'date', 'status'] }
   ];
   let i = 0;
   const next = () => {
@@ -360,15 +376,36 @@ function exportXLSX() {
     losingTeam: Array.isArray(r.losingTeam) ? r.losingTeam.join(', ') : '',
     note: r.note || '',
   }));
+  const quarterlyRows = (state.quarterlyContributions || []).map(r => ({
+    member: r.member || '',
+    q1_amount: r.q1_amount || 0,
+    q1_date: r.q1_date || '',
+    q2_amount: r.q2_amount || 0,
+    q2_date: r.q2_date || '',
+    q3_amount: r.q3_amount || 0,
+    q3_date: r.q3_date || '',
+    q4_amount: r.q4_amount || 0,
+    q4_date: r.q4_date || '',
+  }));
+  const expenseRows = (state.expenses || []).map(r => ({
+    name: r.name || '',
+    quarter: Number(r.quarter) || 1,
+    year: Number(r.year) || 2026,
+    amount: Number(r.amount) || 0,
+    date: r.date || '',
+    status: r.status || 'normal',
+  }));
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(memberRows), 'ThanhVien');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(matchRows), 'TranDau');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fundRows), 'DongQuy');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fundRows), 'DongPhat');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(quarterlyRows), 'DongQuy');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows), 'ChiTieu');
 
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   XLSX.writeFile(wb, `buafc-backup-${ts}.xlsx`);
-  showToast(`Đã tải XLSX: ${memberRows.length}m / ${matchRows.length}t / ${fundRows.length}q`, 'success');
+  showToast(`Đã tải XLSX thành công ✓`, 'success');
 }
 if (typeof window !== 'undefined') {
   window.exportXLSX = exportXLSX;
@@ -400,7 +437,9 @@ function importBackup() {
         parsed = {
           members: sheetToRows('ThanhVien'),
           matches: sheetToRows('TranDau'),
-          fundPayments: sheetToRows('DongQuy'),
+          fundPayments: sheetToRows('DongPhat'),
+          quarterlyContributions: sheetToRows('DongQuy'),
+          expenses: sheetToRows('ChiTieu'),
         };
       }
       
@@ -408,9 +447,11 @@ function importBackup() {
         members: (parsed.members || []).length,
         matches: (parsed.matches || []).length,
         fundPayments: (parsed.fundPayments || []).length,
+        quarterlyContributions: (parsed.quarterlyContributions || []).length,
+        expenses: (parsed.expenses || []).length,
       };
       
-      if (!confirm(`Import: ${counts.members}m / ${counts.matches}t / ${counts.fundPayments}q\n\nĐè lên dữ liệu hiện tại?`)) return;
+      if (!confirm(`Import: ${counts.members}m / ${counts.matches}t / ${counts.fundPayments}q / ${counts.quarterlyContributions}đ / ${counts.expenses}c\n\nĐè lên dữ liệu hiện tại?`)) return;
 
       if (Array.isArray(parsed.members)) state.members = parsed.members;
       if (Array.isArray(parsed.matches)) {
@@ -422,6 +463,8 @@ function importBackup() {
         });
       }
       if (Array.isArray(parsed.fundPayments)) state.fundPayments = parsed.fundPayments;
+      if (Array.isArray(parsed.quarterlyContributions)) state.quarterlyContributions = parsed.quarterlyContributions;
+      if (Array.isArray(parsed.expenses)) state.expenses = parsed.expenses;
       
       state.initialSynced = true;
       save();
@@ -450,19 +493,30 @@ function renderAll() {
 
 function renderDashboard() {
   const matches = state.matches;
-  const totalFund = state.fundPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
   const activeMembers = state.members.filter(m => m.status === 'active');
-  const lossesCount = state.fundPayments.length;
+
+  const totalFines = state.fundPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const totalContributions = state.quarterlyContributions.reduce((s, c) => {
+    const q1 = Number(c.q1_amount) || 0;
+    const q2 = Number(c.q2_amount) || 0;
+    const q3 = Number(c.q3_amount) || 0;
+    const q4 = Number(c.q4_amount) || 0;
+    return s + q1 + q2 + q3 + q4;
+  }, 0);
+  const totalIncome = totalContributions + totalFines;
+  const totalExpenses = state.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const balance = totalIncome - totalExpenses;
 
   const balEl = document.getElementById('statBalance');
-  balEl.textContent = fmt(totalFund) + 'đ';
-  balEl.className = 'stat-value positive';
+  balEl.textContent = fmt(balance) + 'đ';
+  balEl.className = 'stat-value ' + (balance >= 0 ? 'positive' : 'negative');
+  document.getElementById('statBalanceLabel').textContent = 'Số dư quỹ đội';
 
   document.getElementById('statMatches').textContent = matches.length;
   document.getElementById('statMembers').textContent = activeMembers.length;
   
   const tfEl = document.getElementById('statTotalFund');
-  tfEl.textContent = fmt(totalFund) + 'đ';
+  tfEl.textContent = fmt(totalIncome) + 'đ';
   tfEl.className = 'stat-value positive';
 
   // Count matches by type for Donut
@@ -593,32 +647,350 @@ function renderMatches() {
 
 function filterMonth(m) { state.selectedMonth = m; renderMatches(); }
 
+function switchSubTab(el) {
+  const container = el.closest('#tabFund');
+  if (!container) return;
+  container.querySelectorAll('.sub-tab-item').forEach(n => n.classList.remove('active'));
+  container.querySelectorAll('.sub-tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const subtabId = el.dataset.subtab;
+  document.getElementById(subtabId).classList.add('active');
+  state.currentSubTab = subtabId;
+  renderFund();
+}
+
+function filterQuarter(q) {
+  state.selectedQuarter = Number(q);
+  document.querySelectorAll('.quarter-chip').forEach(c => {
+    c.classList.toggle('active', Number(c.dataset.quarter) === state.selectedQuarter);
+  });
+  renderFund();
+}
+
+function goToQuarterTab(q) {
+  state.selectedQuarter = q;
+  document.querySelectorAll('.quarter-chip').forEach(c => {
+    c.classList.toggle('active', Number(c.dataset.quarter) === q);
+  });
+  const el = document.querySelector(`.sub-tab-item[data-subtab="subtabContributions"]`);
+  if (el) switchSubTab(el);
+}
+
+if (typeof window !== 'undefined') {
+  window.switchSubTab = switchSubTab;
+  window.filterQuarter = filterQuarter;
+  window.goToQuarterTab = goToQuarterTab;
+}
+
+function getQuarterByDate(dateStr) {
+  if (!dateStr || dateStr.length < 7) return 1;
+  const month = parseInt(dateStr.substring(5, 7), 10);
+  if (month >= 1 && month <= 3) return 1;
+  if (month >= 4 && month <= 6) return 2;
+  if (month >= 7 && month <= 9) return 3;
+  return 4;
+}
+
 function renderFund() {
-  document.getElementById('fundPeriodLabel').textContent = "Danh sách phạt thua lũy kế";
+  if (!state.currentSubTab) state.currentSubTab = 'subtabSummary';
+  if (!state.selectedQuarter) state.selectedQuarter = 3;
+
+  // Recalculate totals
+  const totalFines = state.fundPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const totalContributions = state.quarterlyContributions.reduce((s, c) => {
+    const q1 = Number(c.q1_amount) || 0;
+    const q2 = Number(c.q2_amount) || 0;
+    const q3 = Number(c.q3_amount) || 0;
+    const q4 = Number(c.q4_amount) || 0;
+    return s + q1 + q2 + q3 + q4;
+  }, 0);
+  const totalIncome = totalContributions + totalFines;
+  const totalExpenses = state.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const balance = totalIncome - totalExpenses;
+
+  // 1. SUBTAB SUMMARY & EXPENSES
+  if (state.currentSubTab === 'subtabSummary') {
+    document.getElementById('fundBalance').textContent = fmt(balance) + 'đ';
+    document.getElementById('fundBalance').className = 'stat-value ' + (balance >= 0 ? 'positive' : 'negative');
+
+    // Calculate quarterly stats
+    let qStats = [
+      { contributions: 0, fines: 0, expenses: 0, remaining: 0 },
+      { contributions: 0, fines: 0, expenses: 0, remaining: 0 },
+      { contributions: 0, fines: 0, expenses: 0, remaining: 0 },
+      { contributions: 0, fines: 0, expenses: 0, remaining: 0 }
+    ];
+
+    // Contributions per quarter
+    state.quarterlyContributions.forEach(c => {
+      qStats[0].contributions += Number(c.q1_amount) || 0;
+      qStats[1].contributions += Number(c.q2_amount) || 0;
+      qStats[2].contributions += Number(c.q3_amount) || 0;
+      qStats[3].contributions += Number(c.q4_amount) || 0;
+    });
+
+    // Fines per quarter
+    state.fundPayments.forEach(p => {
+      const q = getQuarterByDate(p.timestamp.substring(0, 10));
+      qStats[q - 1].fines += Number(p.amount) || 0;
+    });
+
+    // Expenses per quarter
+    state.expenses.forEach(e => {
+      const q = Number(e.quarter) || 1;
+      qStats[q - 1].expenses += Number(e.amount) || 0;
+    });
+
+    // Cumulative remaining
+    let prevRemaining = 0;
+    for (let q = 1; q <= 4; q++) {
+      qStats[q - 1].remaining = prevRemaining + qStats[q - 1].contributions + qStats[q - 1].fines - qStats[q - 1].expenses;
+      prevRemaining = qStats[q - 1].remaining;
+    }
+
+    // Render summary grid
+    document.getElementById('quartersSummaryGrid').innerHTML = qStats.map((s, idx) => {
+      const q = idx + 1;
+      return `<div class="quarter-summary-card" onclick="goToQuarterTab(${q})">
+        <div class="quarter-summary-title">Quý ${q}/2026</div>
+        <div class="quarter-summary-row" style="margin-top: 6px;">
+          <span>Đóng quỹ:</span>
+          <span>${fmt(s.contributions)}đ</span>
+        </div>
+        <div class="quarter-summary-row">
+          <span>Phạt thua:</span>
+          <span>${fmt(s.fines)}đ</span>
+        </div>
+        <div class="quarter-summary-row">
+          <span>Đã chi:</span>
+          <span>${fmt(s.expenses)}đ</span>
+        </div>
+        <div class="quarter-summary-row total-row">
+          <span>Quỹ còn:</span>
+          <span>${fmt(s.remaining)}đ</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Render expense list
+    const sortedExpenses = [...state.expenses]
+      .map((e, idx) => ({ ...e, originalIndex: idx }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    document.getElementById('expenseCount').textContent = sortedExpenses.length;
+    document.getElementById('expenseList').innerHTML = sortedExpenses.map(item => {
+      const isFree = item.amount === 0;
+      return `<div class="expense-item" onclick="openEditExpense(${item.originalIndex})">
+        <div class="expense-icon">💸</div>
+        <div class="expense-info">
+          <div class="expense-name-text">${item.name} (Q${item.quarter})</div>
+          <div class="expense-date-text">${fmtDate(item.date)}${item.status !== 'normal' ? ' · Status: ' + item.status : ''}</div>
+        </div>
+        <div class="expense-amount-val ${isFree ? 'free' : ''}">
+          ${isFree ? item.status : '-' + fmt(item.amount) + 'đ'}
+        </div>
+      </div>`;
+    }).join('') || '<div class="empty-state"><p>Chưa có khoản chi tiêu nào</p></div>';
+  }
+
+  // 2. SUBTAB CONTRIBUTIONS
+  else if (state.currentSubTab === 'subtabContributions') {
+    document.getElementById('totalContributions').textContent = fmt(totalContributions) + 'đ';
+
+    const q = state.selectedQuarter;
+    const amtKey = `q${q}_amount`;
+    const dateKey = `q${q}_date`;
+
+    const sortedMembers = [...state.members].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+
+    document.getElementById('contributionsList').innerHTML = sortedMembers.map(m => {
+      const c = state.quarterlyContributions.find(x => normName(x.member) === normName(m.name)) || {
+        member: m.name, q1_amount: 0, q1_date: '', q2_amount: 0, q2_date: '', q3_amount: 0, q3_date: '', q4_amount: 0, q4_date: ''
+      };
+
+      const amtVal = c[amtKey];
+      const dateVal = c[dateKey];
+
+      let statusCls = 'unpaid';
+      let statusLabel = 'Chưa nộp';
+      let metaText = 'Hạn đóng: cuối quý';
+
+      if (typeof amtVal === 'number' && amtVal > 0) {
+        statusCls = 'paid';
+        statusLabel = fmt(amtVal) + 'đ';
+        metaText = dateVal ? `Đã nộp ngày ${fmtDate(dateVal)}` : 'Đã nộp';
+      } else if (amtVal === 'Nghỉ' || dateVal === 'Nghỉ') {
+        statusCls = 'paused';
+        statusLabel = 'Nghỉ';
+        metaText = 'Tạm nghỉ hoạt động quý này';
+      } else if (amtVal === 'Chưa tham gia' || dateVal === 'Chưa tham gia') {
+        statusCls = 'not_joined';
+        statusLabel = 'Chưa vào';
+        metaText = 'Chưa gia nhập câu lạc bộ';
+      } else if (amtVal === 0 && dateVal !== '') {
+        statusCls = 'not_joined';
+        statusLabel = dateVal;
+        metaText = dateVal;
+      }
+
+      const initials = safeInitial(m.name);
+      const safeName = String(m.name).replace(/'/g, "\\'");
+
+      return `<div class="contribution-card" onclick="openEditContribution('${safeName}', ${q})">
+        <div class="contribution-avatar">${initials}</div>
+        <div class="contribution-card-info">
+          <div class="contribution-card-name">${m.name}</div>
+          <div class="contribution-card-meta">${metaText}</div>
+        </div>
+        <div class="contribution-status-badge ${statusCls}">${statusLabel}</div>
+      </div>`;
+    }).join('') || '<div class="empty-state"><p>Chưa có thành viên nào</p></div>';
+  }
+
+  // 3. SUBTAB FINES
+  else if (state.currentSubTab === 'subtabFines') {
+    document.getElementById('fundPeriodTotal').textContent = fmt(totalFines) + 'đ';
+
+    const sortedList = Object.values(state.memberStatsCache)
+      .sort((a, b) => b.fineAmount - a.fineAmount || a.name.localeCompare(b.name, 'vi'));
+
+    document.getElementById('fundList').innerHTML = sortedList.map(item => {
+      const hasPaid = item.fineAmount > 0;
+      const initials = safeInitial(item.name);
+      const pausedTag = item.status === 'paused' ? ' <span class="paused-tag">(tạm nghỉ)</span>' : '';
+      const statusCls = hasPaid ? 'paid' : 'unpaid';
+      const statusLabel = hasPaid ? `${item.fineCount} trận` : '0 trận';
+      return `<div class="fund-row">
+        <div class="fund-avatar">${initials}</div>
+        <div class="fund-info">
+          <div class="fund-name">${item.name}${pausedTag}</div>
+          <div class="fund-detail">${hasPaid ? fmt(item.fineAmount) + 'đ tiền phạt' : 'Không bị phạt'}</div>
+        </div>
+        <div class="fund-status ${statusCls}">${statusLabel}</div>
+      </div>`;
+    }).join('') || '<div class="empty-state"><p>Chưa có thành viên nào</p></div>';
+  }
+}
+
+function populateExpenseModal() {
+  document.getElementById('expenseModalTitle').textContent = '💸 Thêm khoản chi';
+  document.getElementById('editExpenseId').value = '';
+  document.getElementById('expenseName').value = '';
+  document.getElementById('expenseQuarter').value = state.selectedQuarter || '3';
+  document.getElementById('expenseAmount').value = '';
+  document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('expenseStatus').value = 'normal';
+  document.getElementById('btnDeleteExpense').style.display = 'none';
+}
+
+function openEditExpense(idx) {
+  const item = state.expenses[idx];
+  if (!item) return;
+  document.getElementById('expenseModalTitle').textContent = '✏️ Sửa khoản chi';
+  document.getElementById('editExpenseId').value = idx;
+  document.getElementById('expenseName').value = item.name || '';
+  document.getElementById('expenseQuarter').value = item.quarter || '1';
+  document.getElementById('expenseAmount').value = item.amount || 0;
+  document.getElementById('expenseDate').value = item.date || '';
+  document.getElementById('expenseStatus').value = item.status || 'normal';
+  document.getElementById('btnDeleteExpense').style.display = 'block';
+  openModal('modalExpense');
+}
+
+async function saveExpense() {
+  const idxStr = document.getElementById('editExpenseId').value;
+  const name = document.getElementById('expenseName').value.trim();
+  const quarter = Number(document.getElementById('expenseQuarter').value) || 1;
+  const amount = Number(document.getElementById('expenseAmount').value) || 0;
+  const date = document.getElementById('expenseDate').value;
+  const status = document.getElementById('expenseStatus').value.trim() || 'normal';
+
+  if (!name) return showToast('Vui lòng nhập tên khoản chi', 'error');
+
+  const newExpense = { name, quarter, year: 2026, amount, date, status };
+
+  if (idxStr === '') {
+    state.expenses.push(newExpense);
+    showToast('Đã thêm khoản chi tiêu 💸');
+  } else {
+    const idx = Number(idxStr);
+    state.expenses[idx] = newExpense;
+    showToast('Đã cập nhật khoản chi tiêu ✏️');
+  }
+
+  save();
+  renderAll();
+  closeModal('modalExpense');
+
+  await apiCall('/api/expenses', 'POST', newExpense);
+}
+
+async function deleteExpense() {
+  const idxStr = document.getElementById('editExpenseId').value;
+  if (idxStr === '') return;
+  if (!confirm('Bạn có chắc muốn xóa khoản chi này?')) return;
+  const idx = Number(idxStr);
+  state.expenses.splice(idx, 1);
+  save();
+  renderAll();
+  closeModal('modalExpense');
+  showToast('Đã xóa khoản chi 🗑️');
   
-  const sortedList = Object.values(state.memberStatsCache)
-    .sort((a, b) => b.fineAmount - a.fineAmount || a.name.localeCompare(b.name, 'vi'));
-    
-  const total = state.fundPayments.reduce((s, p) => s + p.amount, 0);
-  document.getElementById('fundPeriodTotal').textContent = fmt(total) + 'đ';
+  await apiCall('/api/expenses', 'DELETE', { index: idx });
+}
 
-  const html = sortedList.map(item => {
-    const hasPaid = item.fineAmount > 0;
-    const initials = safeInitial(item.name);
-    const pausedTag = item.status === 'paused' ? ' <span class="paused-tag">(tạm nghỉ)</span>' : '';
-    const statusCls = hasPaid ? 'paid' : 'unpaid';
-    const statusLabel = hasPaid ? `${item.fineCount} trận` : '0 trận';
-    return `<div class="fund-row">
-      <div class="fund-avatar">${initials}</div>
-      <div class="fund-info">
-        <div class="fund-name">${item.name}${pausedTag}</div>
-        <div class="fund-detail">${hasPaid ? fmt(item.fineAmount) + 'đ tiền phạt' : 'Không bị phạt'}</div>
-      </div>
-      <div class="fund-status ${statusCls}">${statusLabel}</div>
-    </div>`;
-  }).join('') || '<div class="empty-state"><p>Chưa có thành viên nào</p></div>';
+function openEditContribution(memberName, quarter) {
+  const c = state.quarterlyContributions.find(x => normName(x.member) === normName(memberName));
+  if (!c) return;
+  document.getElementById('editContributionMember').value = memberName;
+  document.getElementById('editContributionQuarter').value = quarter;
+  document.getElementById('contributionMemberName').value = memberName;
+  document.getElementById('contributionQuarterLabel').value = `Quý ${quarter}/2026`;
+  
+  const amtKey = `q${quarter}_amount`;
+  const dateKey = `q${quarter}_date`;
+  
+  const amtVal = c[amtKey];
+  const dateVal = c[dateKey];
+  
+  document.getElementById('contributionAmount').value = (typeof amtVal === 'number') ? amtVal : 0;
+  document.getElementById('contributionDate').value = dateVal || '';
+  
+  openModal('modalQuarterlyContribution');
+}
 
-  document.getElementById('fundList').innerHTML = html;
+async function saveQuarterlyContribution() {
+  const memberName = document.getElementById('editContributionMember').value;
+  const quarter = Number(document.getElementById('editContributionQuarter').value);
+  const amountInput = document.getElementById('contributionAmount').value;
+  const dateInput = document.getElementById('contributionDate').value.trim();
+
+  const c = state.quarterlyContributions.find(x => normName(x.member) === normName(memberName));
+  if (!c) return;
+
+  const amtKey = `q${quarter}_amount`;
+  const dateKey = `q${quarter}_date`;
+
+  let amount = Number(amountInput);
+  if (isNaN(amount)) amount = amountInput;
+
+  c[amtKey] = amount;
+  c[dateKey] = dateInput;
+
+  save();
+  renderAll();
+  closeModal('modalQuarterlyContribution');
+  showToast('Đã cập nhật đóng quỹ thành viên 💰');
+
+  await apiCall('/api/contributions', 'POST', { member: memberName, quarter, amount, date: dateInput });
+}
+
+if (typeof window !== 'undefined') {
+  window.openEditExpense = openEditExpense;
+  window.saveExpense = saveExpense;
+  window.deleteExpense = deleteExpense;
+  window.openEditContribution = openEditContribution;
+  window.saveQuarterlyContribution = saveQuarterlyContribution;
 }
 
 function openMonthlyReport() {
@@ -1550,6 +1922,8 @@ async function syncFromSheet(force = false) {
       });
     }
     if (data.fundPayments) state.fundPayments = data.fundPayments;
+    if (data.quarterlyContributions) state.quarterlyContributions = data.quarterlyContributions;
+    if (data.expenses) state.expenses = data.expenses;
 
     state.initialSynced = true;
     save(); renderAll();

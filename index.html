@@ -107,16 +107,71 @@
 
       <!-- Fund Tab -->
       <div class="tab-panel" id="tabFund">
-        <div class="period-header">
-          <div class="period-nav">
-            <span class="period-label" id="fundPeriodLabel">Quỹ Phạt Trận Thua (20K/Trận)</span>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:1.1rem;font-weight:800;color:var(--accent)" id="fundPeriodTotal">0đ</div>
-            <div style="font-size:0.65rem;color:var(--text-muted)">TỔNG TIỀN PHẠT</div>
-          </div>
+        <!-- Sub-tabs Selector -->
+        <div class="sub-tab-container">
+          <div class="sub-tab-item active" data-subtab="subtabSummary" onclick="switchSubTab(this)">Thu - Chi</div>
+          <div class="sub-tab-item" data-subtab="subtabContributions" onclick="switchSubTab(this)">Đóng Quỹ</div>
+          <div class="sub-tab-item" data-subtab="subtabFines" onclick="switchSubTab(this)">Phạt Thua</div>
         </div>
-        <div id="fundList"></div>
+
+        <!-- Sub-tab 1: Summary & Expenses -->
+        <div class="sub-tab-panel active" id="subtabSummary">
+          <div class="period-header" style="margin-bottom:12px;">
+            <div>
+              <span class="period-label">Chi Tiêu Sân & Sự Kiện</span>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--accent)" id="fundBalance">0đ</div>
+              <div style="font-size:0.65rem;color:var(--text-muted)">SỐ DƯ THỰC TẾ</div>
+            </div>
+          </div>
+          
+          <!-- Summary Cards of Quarters -->
+          <div class="quarters-summary-grid" id="quartersSummaryGrid">
+            <!-- Populated by JS -->
+          </div>
+
+          <div class="section-title" style="margin-top: 16px; margin-bottom: 10px;">
+            Nhật ký chi tiêu
+            <span class="count" id="expenseCount">0</span>
+          </div>
+          <div id="expenseList"></div>
+        </div>
+
+        <!-- Sub-tab 2: Quarterly Contributions -->
+        <div class="sub-tab-panel" id="subtabContributions">
+          <div class="period-header" style="margin-bottom:12px;">
+            <div>
+              <span class="period-label">Danh Sách Nộp Quỹ Theo Quý</span>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--accent)" id="totalContributions">0đ</div>
+              <div style="font-size:0.65rem;color:var(--text-muted)">TỔNG ĐÓNG QUỸ</div>
+            </div>
+          </div>
+          <!-- Quarterly filter chips -->
+          <div class="quarter-selector" id="quarterSelector" style="display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; padding-bottom:4px;">
+            <div class="quarter-chip active" data-quarter="1" onclick="filterQuarter(1)">Quý 1</div>
+            <div class="quarter-chip" data-quarter="2" onclick="filterQuarter(2)">Quý 2</div>
+            <div class="quarter-chip" data-quarter="3" onclick="filterQuarter(3)">Quý 3</div>
+            <div class="quarter-chip" data-quarter="4" onclick="filterQuarter(4)">Quý 4</div>
+          </div>
+          <div id="contributionsList" class="contributions-list"></div>
+        </div>
+
+        <!-- Sub-tab 3: Match Penalty Fines (Original Fund UI) -->
+        <div class="sub-tab-panel" id="subtabFines">
+          <div class="period-header" style="margin-bottom:12px;">
+            <div>
+              <span class="period-label" id="fundPeriodLabel">Quỹ Phạt Trận Thua (20K/Trận)</span>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--accent)" id="fundPeriodTotal">0đ</div>
+              <div style="font-size:0.65rem;color:var(--text-muted)">TỔNG TIỀN PHẠT THU</div>
+            </div>
+          </div>
+          <div id="fundList"></div>
+        </div>
       </div>
 
       <!-- Members Tab -->
@@ -470,6 +525,75 @@
           <div class="report-list" id="reportThuList"></div>
         </div>
         <button class="btn btn-secondary" onclick="closeModal('modalMonthlyReport')" style="width:100%; margin-top:16px">Đóng</button>
+      </div>
+    </div>
+
+    <!-- Expense Modal -->
+    <div class="modal-overlay" id="modalExpense">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <h2 id="expenseModalTitle">💸 Chi tiêu Quỹ</h2>
+        <input type="hidden" id="editExpenseId">
+        <div class="form-group">
+          <label class="form-label">Tên khoản chi / Tuần</label>
+          <input type="text" class="form-input" id="expenseName" placeholder="VD: Chi tiền Tuần 1, nước uống, bóng...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quý chi</label>
+          <select class="form-select" id="expenseQuarter">
+            <option value="1">Quý 1</option>
+            <option value="2">Quý 2</option>
+            <option value="3">Quý 3</option>
+            <option value="4">Quý 4</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số tiền chi (VNĐ)</label>
+          <input type="number" class="form-input" id="expenseAmount" placeholder="VD: 600000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ngày chi</label>
+          <input type="date" class="form-input" id="expenseDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ghi chú trạng thái</label>
+          <input type="text" class="form-input" id="expenseStatus" placeholder="VD: normal, Nghỉ, Hoãn..." value="normal">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-secondary" id="btnDeleteExpense" onclick="deleteExpense()" style="flex:1;background:rgba(239,68,68,0.2);color:#ef4444;border-color:transparent;display:none;">Xóa</button>
+          <button class="btn btn-secondary" id="btnCancelExpense" onclick="closeModal('modalExpense')" style="flex:1">Hủy</button>
+          <button class="btn btn-primary" onclick="saveExpense()" style="flex:2">Lưu lại</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quarterly Contribution Modal -->
+    <div class="modal-overlay" id="modalQuarterlyContribution">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <h2>💰 Đóng Quỹ Thành Viên</h2>
+        <input type="hidden" id="editContributionMember">
+        <input type="hidden" id="editContributionQuarter">
+        <div class="form-group">
+          <label class="form-label">Thành viên</label>
+          <input type="text" class="form-input" id="contributionMemberName" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quý đóng</label>
+          <input type="text" class="form-input" id="contributionQuarterLabel" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số tiền đóng (VNĐ)</label>
+          <input type="number" class="form-input" id="contributionAmount" placeholder="VD: 500000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ngày nộp / Ghi chú</label>
+          <input type="text" class="form-input" id="contributionDate" placeholder="VD: 2026-01-27 hoặc Nghỉ, Chưa tham gia...">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn-secondary" onclick="closeModal('modalQuarterlyContribution')" style="flex:1">Hủy</button>
+          <button class="btn btn-primary" onclick="saveQuarterlyContribution()" style="flex:2">Lưu lại</button>
+        </div>
       </div>
     </div>
 

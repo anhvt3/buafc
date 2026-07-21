@@ -618,6 +618,7 @@ function renderMonthlyChart() {
       labels,
       datasets: [
         {
+          type: 'bar',
           label: 'Thu',
           data: thuData,
           backgroundColor: 'rgba(0, 255, 149, 0.75)',
@@ -626,12 +627,19 @@ function renderMonthlyChart() {
           borderRadius: 4,
         },
         {
+          type: 'line',
           label: 'Chi',
           data: chiData,
-          backgroundColor: 'rgba(255, 51, 102, 0.75)',
           borderColor: 'var(--danger)',
-          borderWidth: 1.5,
-          borderRadius: 4,
+          backgroundColor: 'rgba(255, 51, 102, 0.15)',
+          borderWidth: 3,
+          pointBackgroundColor: 'var(--danger)',
+          pointBorderColor: '#07090d',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.35,
+          fill: false
         }
       ]
     },

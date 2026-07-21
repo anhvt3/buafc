@@ -362,9 +362,9 @@
         <div class="form-group">
           <label class="form-label">Kết quả</label>
           <div class="result-selector">
-            <div class="result-option lose" onclick="selectEditResult('Thua', this)">Đá xong (Có đội thua) ❌</div>
-            <div class="result-option draw" onclick="selectEditResult('Hòa', this)">Hòa 🤝</div>
-            <div class="result-option draw" onclick="selectEditResult('Hoãn', this)">Mưa hoãn 🌧️</div>
+            <div class="result-option lose" onclick="selectResult('Thua', this, 'edit')">Đá xong (Có đội thua) ❌</div>
+            <div class="result-option draw" onclick="selectResult('Hòa', this, 'edit')">Hòa 🤝</div>
+            <div class="result-option draw" onclick="selectResult('Hoãn', this, 'edit')">Mưa hoãn 🌧️</div>
           </div>
           <input type="hidden" id="editMatchResult" value="">
         </div>

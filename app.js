@@ -3,7 +3,8 @@ let state = {
   currentTab: 'tabDashboard',
   selectedMonth: 'all',
   pendingWrites: 0,
-  initialSynced: false
+  initialSynced: false,
+  memberStatsCache: {}
 };
 
 const DEFAULT_API_URL = '';
@@ -40,6 +41,82 @@ function init() {
   if (state.apiUrl) {
     syncFromSheet();
   }
+}
+
+function updateStatsCache() {
+  const cache = {};
+  state.members.forEach(m => {
+    cache[normName(m.name)] = {
+      name: m.name,
+      status: m.status,
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      winRate: 0,
+      lossRate: 0,
+      fineCount: 0,
+      fineAmount: 0,
+      formHistory: []
+    };
+  });
+
+  const sortedMatches = [...state.matches].sort((a, b) => a.date.localeCompare(b.date));
+  
+  sortedMatches.forEach(m => {
+    const res = classifyResult(m.result);
+    if (res === 'cancelled') return;
+    
+    const playedTeam = m.playedTeam || [];
+    const losingTeam = m.losingTeam || [];
+    
+    playedTeam.forEach(name => {
+      const k = normName(name);
+      if (!cache[k]) {
+        cache[k] = {
+          name, status: 'paused', played: 0, wins: 0, draws: 0, losses: 0,
+          winRate: 0, lossRate: 0, fineCount: 0, fineAmount: 0, formHistory: []
+        };
+      }
+      
+      const p = cache[k];
+      p.played++;
+      
+      if (res === 'draw') {
+        p.draws++;
+        p.formHistory.push('D');
+      } else {
+        const isLose = losingTeam.some(l => normName(l) === k);
+        if (isLose) {
+          p.losses++;
+          p.formHistory.push('L');
+        } else {
+          p.wins++;
+          p.formHistory.push('W');
+        }
+      }
+    });
+  });
+
+  state.fundPayments.forEach(pay => {
+    const k = normName(pay.member);
+    if (!cache[k]) {
+      cache[k] = {
+        name: pay.member, status: 'paused', played: 0, wins: 0, draws: 0, losses: 0,
+        winRate: 0, lossRate: 0, fineCount: 0, fineAmount: 0, formHistory: []
+      };
+    }
+    const p = cache[k];
+    p.fineCount++;
+    p.fineAmount += Number(pay.amount) || 0;
+  });
+
+  Object.values(cache).forEach(p => {
+    p.winRate = p.played ? p.wins / p.played : 0;
+    p.lossRate = p.played ? p.losses / p.played : 0;
+  });
+
+  state.memberStatsCache = cache;
 }
 
 let _saveWarnShown = false;
@@ -103,29 +180,16 @@ function resultLabel(r) {
   return c === 'lose' ? 'L' : c === 'draw' ? 'D' : c === 'cancelled' ? 'C' : 'W';
 }
 
-function selectResult(res, el) {
-  document.getElementById('matchResult').value = res;
+function selectResult(res, el, prefix = '') {
+  const inputId = prefix ? prefix + 'MatchResult' : 'matchResult';
+  const groupId = prefix ? prefix + 'LosingTeamGroup' : 'losingTeamGroup';
+  document.getElementById(inputId).value = res;
   if (el) {
     const sel = el.closest('.result-selector');
     if (sel) sel.querySelectorAll('.result-option').forEach(n => n.classList.remove('active'));
     el.classList.add('active');
   }
-  const group = document.getElementById('losingTeamGroup');
-  if (res === 'Thua') {
-    group.style.display = 'block';
-  } else {
-    group.style.display = 'none';
-  }
-}
-
-function selectEditResult(res, el) {
-  document.getElementById('editMatchResult').value = res;
-  if (el) {
-    const sel = el.closest('.result-selector');
-    if (sel) sel.querySelectorAll('.result-option').forEach(n => n.classList.remove('active'));
-    el.classList.add('active');
-  }
-  const group = document.getElementById('editLosingTeamGroup');
+  const group = document.getElementById(groupId);
   if (res === 'Thua') {
     group.style.display = 'block';
   } else {
@@ -375,6 +439,7 @@ if (typeof window !== 'undefined') {
 }
 
 function renderAll() {
+  updateStatsCache();
   renderDashboard();
   renderMatches();
   renderFund();
@@ -531,36 +596,23 @@ function filterMonth(m) { state.selectedMonth = m; renderMatches(); }
 function renderFund() {
   document.getElementById('fundPeriodLabel').textContent = "Danh sách phạt thua lũy kế";
   
-  // Aggregate funds by member
-  const memberFines = {};
-  state.members.forEach(m => {
-    memberFines[normName(m.name)] = { name: m.name, count: 0, amount: 0, status: m.status };
-  });
-
-  state.fundPayments.forEach(p => {
-    const k = normName(p.member);
-    if (!memberFines[k]) {
-      memberFines[k] = { name: p.member, count: 0, amount: 0, status: 'paused' };
-    }
-    memberFines[k].count++;
-    memberFines[k].amount += p.amount;
-  });
-
-  const sortedList = Object.values(memberFines).sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name, 'vi'));
+  const sortedList = Object.values(state.memberStatsCache)
+    .sort((a, b) => b.fineAmount - a.fineAmount || a.name.localeCompare(b.name, 'vi'));
+    
   const total = state.fundPayments.reduce((s, p) => s + p.amount, 0);
   document.getElementById('fundPeriodTotal').textContent = fmt(total) + 'đ';
 
   const html = sortedList.map(item => {
-    const hasPaid = item.amount > 0;
+    const hasPaid = item.fineAmount > 0;
     const initials = safeInitial(item.name);
     const pausedTag = item.status === 'paused' ? ' <span class="paused-tag">(tạm nghỉ)</span>' : '';
     const statusCls = hasPaid ? 'paid' : 'unpaid';
-    const statusLabel = hasPaid ? `${item.count} trận` : '0 trận';
+    const statusLabel = hasPaid ? `${item.fineCount} trận` : '0 trận';
     return `<div class="fund-row">
       <div class="fund-avatar">${initials}</div>
       <div class="fund-info">
         <div class="fund-name">${item.name}${pausedTag}</div>
-        <div class="fund-detail">${hasPaid ? fmt(item.amount) + 'đ tiền phạt' : 'Không bị phạt'}</div>
+        <div class="fund-detail">${hasPaid ? fmt(item.fineAmount) + 'đ tiền phạt' : 'Không bị phạt'}</div>
       </div>
       <div class="fund-status ${statusCls}">${statusLabel}</div>
     </div>`;
@@ -629,31 +681,16 @@ function renderMonthlyReport() {
     .join('') || '<div class="report-empty">Không có khoản phạt nào trong tháng</div>';
 }
 
-function getMemberStats(memberName) {
-  let wins = 0, draws = 0, losses = 0, played = 0;
-  state.matches.forEach(mt => {
-    const res = classifyResult(mt.result);
-    if (res === 'cancelled') return;
-    if (mt.playedTeam && mt.playedTeam.some(name => normName(name) === normName(memberName))) {
-      played++;
-      if (res === 'draw') draws++;
-      else if (mt.losingTeam && mt.losingTeam.some(name => normName(name) === normName(memberName))) losses++;
-      else wins++;
-    }
-  });
-  const lossRate = played ? losses / played : 0;
-  const winRate = played ? wins / played : 0;
-  return { played, wins, draws, losses, lossRate, winRate };
-}
-
 function renderMembers() {
   const colors = ['#1e3a5f', '#3b1f5f', '#5f1e3a', '#1e5f3a', '#5f3a1e', '#3a1e5f'];
   document.getElementById('memberCount').textContent = `${state.members.length} thành viên`;
 
-  const membersWithStats = state.members.map(m => ({
-    ...m,
-    stats: getMemberStats(m.name)
-  }));
+  const membersWithStats = state.members.map(m => {
+    const stats = state.memberStatsCache[normName(m.name)] || {
+      played: 0, wins: 0, draws: 0, losses: 0, winRate: 0, lossRate: 0, formHistory: []
+    };
+    return { ...m, stats };
+  });
 
   const MIN_MATCHES = 3;
   const sorted = membersWithStats.sort((a, b) => {
@@ -668,9 +705,12 @@ function renderMembers() {
     const bg = colors[i % colors.length];
     const s = m.stats;
     const safeName = String(m.name || '').replace(/'/g, "\\'");
-    const formGuide = getMemberRecentForm(m.name, 5);
-    const lrPct = s.played ? (s.lossRate * 100).toFixed(0) : '0';
     const wrPct = s.played ? (s.winRate * 100).toFixed(0) : '0';
+    
+    const formGuide = s.formHistory.slice(-5).map(f => {
+      const cls = f === 'W' ? 'win' : f === 'D' ? 'draw' : 'lose';
+      return `<span class="form-badge ${cls}" style="width:14px; height:14px; font-size:0.55rem; line-height:14px;">${f}</span>`;
+    }).join('');
     
     return `<div class="member-card" onclick="openEditMember('${safeName}')">
       <div class="member-avatar" style="background:linear-gradient(135deg,${bg},${bg}cc)">${initials}</div>
@@ -690,34 +730,6 @@ function renderMembers() {
       <div class="member-status ${m.status || 'active'}">${m.status === 'paused' ? 'Tạm nghỉ' : 'Hoạt động'}</div>
     </div>`;
   }).join('') || '<div class="empty-state"><p>Chưa có thành viên</p></div>';
-}
-
-function getMemberRecentForm(memberName, limit = 5) {
-  const sortedMatches = [...state.matches].sort((a, b) => a.date.localeCompare(b.date));
-  const memberForm = [];
-  
-  sortedMatches.forEach(m => {
-    const isCancelled = classifyResult(m.result) === 'cancelled';
-    if (isCancelled) return;
-
-    const played = m.playedTeam || [];
-    const inMatch = played.some(name => normName(name) === normName(memberName));
-    if (!inMatch) return;
-
-    const isDraw = classifyResult(m.result) === 'draw';
-    if (isDraw) {
-      memberForm.push('<span class="form-badge draw" style="width:14px; height:14px; font-size:0.55rem; line-height:14px;">D</span>');
-    } else {
-      const isLose = m.losingTeam && m.losingTeam.some(name => normName(name) === normName(memberName));
-      if (isLose) {
-        memberForm.push('<span class="form-badge lose" style="width:14px; height:14px; font-size:0.55rem; line-height:14px;">L</span>');
-      } else {
-        memberForm.push('<span class="form-badge win" style="width:14px; height:14px; font-size:0.55rem; line-height:14px;">W</span>');
-      }
-    }
-  });
-
-  return memberForm.slice(-limit).join('');
 }
 
 function renderLog() {
@@ -825,6 +837,22 @@ if (typeof window !== 'undefined') {
   window.togglePercentShow = togglePercentShow;
 }
 
+function createStackedBarChart(canvasEl, labels, datasets, options = {}) {
+  return new Chart(canvasEl, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: Object.assign({
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { stacked: true, ticks: { color: '#9ca3af', font: { size: 9 }, autoSkip: false }, grid: { display: false } }
+      }
+    }, options)
+  });
+}
+
 function renderCharts() {
   // --- Form Guide (5 Trận Gần Nhất cả đội) ---
   const recentForm = [...state.matches].sort((a, b) => a.date.localeCompare(b.date)).slice(-5);
@@ -909,33 +937,20 @@ function renderCharts() {
   }
 
   // 2. Biểu đồ xếp hạng phạt thua các thành viên
-  const memberStats = {};
-  state.members.forEach(m => {
-    memberStats[m.name] = 0;
-  });
-  state.fundPayments.forEach(p => {
-    if (memberStats[p.member] !== undefined) {
-      memberStats[p.member] += p.amount;
-    } else {
-      memberStats[p.member] = p.amount;
-    }
-  });
-
-  const sortedStats = Object.entries(memberStats)
-    .filter(item => item[1] > 0)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi'));
+  const sortedStats = Object.values(state.memberStatsCache)
+    .filter(item => item.fineAmount > 0)
+    .sort((a, b) => b.fineAmount - a.fineAmount || a.name.localeCompare(b.name, 'vi'));
 
   const displayStats = showAllPenalties ? sortedStats : sortedStats.slice(0, 10);
   const barLabels = displayStats.map((item, idx) => {
-    const rank = sortedStats.findIndex(x => x[0] === item[0]) + 1;
-    return `${rank}. ${item[0]}`;
+    const rank = sortedStats.findIndex(x => x.name === item.name) + 1;
+    return `${rank}. ${item.name}`;
   });
-  const barData = displayStats.map(item => item[1]);
+  const barData = displayStats.map(item => item.fineAmount);
 
   const ctxBar = document.getElementById('costResultBarChart');
   if (costResultBarChart) costResultBarChart.destroy();
   if (ctxBar) {
-    // Dynamic height based on member count to prevent label skipping
     ctxBar.parentNode.style.height = (barLabels.length * 28 + 45) + 'px';
     costResultBarChart = new Chart(ctxBar, {
       type: 'bar',
@@ -976,35 +991,18 @@ function renderCharts() {
   }
 
   // 3. Biểu đồ Stacked Bar Chart phân tích phong độ chi tiết từng thành viên
-  const memberStackedData = state.members.map(m => {
-    let wins = 0, draws = 0, losses = 0, played = 0;
-    state.matches.forEach(mt => {
-      const res = classifyResult(mt.result);
-      if (mt.playedTeam && mt.playedTeam.some(name => normName(name) === normName(m.name))) {
-        played++;
-        if (res === 'draw') {
-          draws++;
-        } else if (res === 'lose') {
-          if (mt.losingTeam && mt.losingTeam.some(name => normName(name) === normName(m.name))) {
-            losses++;
-          } else {
-            wins++;
-          }
-        }
-      }
-    });
-    const winRate = played ? (wins / played) : 0;
-    return {
-      name: m.name,
-      win: wins,
-      draw: draws,
-      lose: losses,
-      played: played,
-      winRate: winRate
-    };
-  }).filter(item => item.played > 0);
+  const memberStackedData = state.members
+    .map(m => state.memberStatsCache[normName(m.name)])
+    .filter(p => p && p.played > 0)
+    .map(p => ({
+      name: p.name,
+      win: p.wins,
+      draw: p.draws,
+      lose: p.losses,
+      played: p.played,
+      winRate: p.winRate
+    }));
 
-  // Sắp xếp theo số trận Thắng giảm dần, tiếp theo là Tỷ lệ thắng giảm dần
   const MIN_MATCHES_CHART = 3;
   memberStackedData.sort((a, b) => {
     const aEnough = a.played >= MIN_MATCHES_CHART ? 1 : 0;
@@ -1026,61 +1024,18 @@ function renderCharts() {
   if (memberStackedChart) memberStackedChart.destroy();
   if (ctxStacked) {
     ctxStacked.parentNode.style.height = (stackedLabels.length * 28 + 45) + 'px';
-    memberStackedChart = new Chart(ctxStacked, {
-      type: 'bar',
-      data: {
-        labels: stackedLabels,
-        datasets: [
-          {
-            label: 'Thắng',
-            data: winData,
-            backgroundColor: '#00F5D4',
-            borderRadius: 4
-          },
-          {
-            label: 'Hòa',
-            data: drawData,
-            backgroundColor: '#FFD166',
-            borderRadius: 4
-          },
-          {
-            label: 'Thua',
-            data: loseData,
-            backgroundColor: '#FF5A5F',
-            borderRadius: 4
-          }
-        ]
+    memberStackedChart = createStackedBarChart(ctxStacked, stackedLabels, [
+      { label: 'Thắng', data: winData, backgroundColor: '#00F5D4', borderRadius: 4 },
+      { label: 'Hòa', data: drawData, backgroundColor: '#FFD166', borderRadius: 4 },
+      { label: 'Thua', data: loseData, backgroundColor: '#FF5A5F', borderRadius: 4 }
+    ], {
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color: '#9ca3af', font: { size: 10 } } },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw} trận` } }
       },
-
-      options: {
-        indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: { color: '#9ca3af', font: { size: 10 } }
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return ` ${context.dataset.label}: ${context.raw} trận`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            ticks: { color: '#9ca3af', font: { size: 9 }, stepSize: 1 },
-            grid: { color: 'rgba(255,255,255,0.05)' }
-          },
-          y: {
-            stacked: true,
-            ticks: { color: '#9ca3af', font: { size: 9 }, autoSkip: false },
-            grid: { display: false }
-          }
-        }
+      scales: {
+        x: { stacked: true, ticks: { color: '#9ca3af', font: { size: 9 }, stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { stacked: true, ticks: { color: '#9ca3af', font: { size: 9 }, autoSkip: false }, grid: { display: false } }
       }
     });
   }
@@ -1099,76 +1054,28 @@ function renderCharts() {
   if (memberPercentStackedChart) memberPercentStackedChart.destroy();
   if (ctxPercent) {
     ctxPercent.parentNode.style.height = (percentLabels.length * 28 + 45) + 'px';
-    memberPercentStackedChart = new Chart(ctxPercent, {
-      type: 'bar',
-      data: {
-        labels: percentLabels,
-        datasets: [
-          {
-            label: 'Thắng (%)',
-            data: winPercentData,
-            rawCounts: displayPercent.map(item => item.win),
-            totalMatches: displayPercent.map(item => item.played),
-            backgroundColor: '#4facfe',
-            borderRadius: 4
-          },
-          {
-            label: 'Hòa (%)',
-            data: drawPercentData,
-            rawCounts: displayPercent.map(item => item.draw),
-            totalMatches: displayPercent.map(item => item.played),
-            backgroundColor: '#a855f7',
-            borderRadius: 4
-          },
-          {
-            label: 'Thua (%)',
-            data: losePercentData,
-            rawCounts: displayPercent.map(item => item.lose),
-            totalMatches: displayPercent.map(item => item.played),
-            backgroundColor: '#f43f5e',
-            borderRadius: 4
-          }
-        ]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: { color: '#9ca3af', font: { size: 10 } }
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const dataset = context.dataset;
-                const percent = context.raw.toFixed(1);
-                const rawCount = dataset.rawCounts[context.dataIndex];
-                const total = dataset.totalMatches[context.dataIndex];
-                return ` ${dataset.label.replace(' (%)', '')}: ${percent}% (${rawCount}/${total} trận)`;
-              }
+    memberPercentStackedChart = createStackedBarChart(ctxPercent, percentLabels, [
+      { label: 'Thắng (%)', data: winPercentData, rawCounts: displayPercent.map(item => item.win), totalMatches: displayPercent.map(item => item.played), backgroundColor: '#4facfe', borderRadius: 4 },
+      { label: 'Hòa (%)', data: drawPercentData, rawCounts: displayPercent.map(item => item.draw), totalMatches: displayPercent.map(item => item.played), backgroundColor: '#a855f7', borderRadius: 4 },
+      { label: 'Thua (%)', data: losePercentData, rawCounts: displayPercent.map(item => item.lose), totalMatches: displayPercent.map(item => item.played), backgroundColor: '#f43f5e', borderRadius: 4 }
+    ], {
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color: '#9ca3af', font: { size: 10 } } },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const dataset = context.dataset;
+              const percent = context.raw.toFixed(1);
+              const rawCount = dataset.rawCounts[context.dataIndex];
+              const total = dataset.totalMatches[context.dataIndex];
+              return ` ${dataset.label.replace(' (%)', '')}: ${percent}% (${rawCount}/${total} trận)`;
             }
           }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            min: 0,
-            max: 100,
-            ticks: { 
-              color: '#9ca3af', 
-              font: { size: 9 },
-              callback: function(value) { return value + '%'; }
-            },
-            grid: { color: 'rgba(255,255,255,0.05)' }
-          },
-          y: {
-            stacked: true,
-            ticks: { color: '#9ca3af', font: { size: 9 }, autoSkip: false },
-            grid: { display: false }
-          }
         }
+      },
+      scales: {
+        x: { stacked: true, min: 0, max: 100, ticks: { color: '#9ca3af', font: { size: 9 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { stacked: true, ticks: { color: '#9ca3af', font: { size: 9 }, autoSkip: false }, grid: { display: false } }
       }
     });
   }

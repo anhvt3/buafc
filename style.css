@@ -1301,3 +1301,43 @@ h1, h2, h3, .stat-value, .stat-label, .period-total, .quarter-summary-title,
   font-weight: 500;
   font-size: 0.75rem;
 }
+
+/* Result Selector & Chips */
+.result-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.result-option {
+  flex: 1;
+  min-width: 90px;
+  padding: 10px 8px;
+  text-align: center;
+  border-radius: var(--radius-xs);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+.result-option:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--text-muted);
+}
+.result-option.active {
+  color: #07090d;
+}
+.result-option.active.lose {
+  background: var(--lose);
+  border-color: var(--lose);
+  box-shadow: 0 4px 12px rgba(255, 51, 102, 0.25);
+}
+.result-option.active.draw {
+  background: var(--draw);
+  border-color: var(--draw);
+  box-shadow: 0 4px 12px rgba(255, 189, 46, 0.25);
+}

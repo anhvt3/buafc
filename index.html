@@ -325,9 +325,28 @@
           </div>
           <input type="hidden" id="matchResult" value="Thua">
         </div>
-        <div class="form-group" id="losingTeamGroup">
-          <label class="form-label">Thành viên đội thua cuộc (Chọn nhiều)</label>
-          <div class="member-checkbox-list" id="matchLosingTeamCheckboxes" style="max-height: 150px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+        <!-- Selection Grid for Win/Lose Match -->
+        <div class="form-group" id="matchTeamsGroup" style="display: block;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label class="form-label" style="color: var(--accent);">Đội thắng cuộc 🟢</label>
+              <div class="member-checkbox-list" id="matchWinningTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(0, 255, 149, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(0, 255, 149, 0.02);">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+            <div>
+              <label class="form-label" style="color: var(--danger);">Đội thua cuộc 🔴</label>
+              <div class="member-checkbox-list" id="matchLosingTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 51, 102, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 51, 102, 0.02);">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selection for Draw Match -->
+        <div class="form-group" id="matchDrawGroup" style="display: none;">
+          <label class="form-label" style="color: var(--warning);">Thành viên tham gia (Hòa) 🤝</label>
+          <div class="member-checkbox-list" id="matchDrawTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 189, 46, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 189, 46, 0.02);">
             <!-- Populated by JS -->
           </div>
         </div>
@@ -415,9 +434,28 @@
           </div>
           <input type="hidden" id="editMatchResult" value="">
         </div>
-        <div class="form-group" id="editLosingTeamGroup">
-          <label class="form-label">Thành viên đội thua cuộc (Chọn nhiều)</label>
-          <div class="member-checkbox-list" id="editMatchLosingTeamCheckboxes" style="max-height: 150px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+        <!-- Selection Grid for Win/Lose Match (Edit) -->
+        <div class="form-group" id="editMatchTeamsGroup" style="display: block;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label class="form-label" style="color: var(--accent);">Đội thắng cuộc 🟢</label>
+              <div class="member-checkbox-list" id="editMatchWinningTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(0, 255, 149, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(0, 255, 149, 0.02);">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+            <div>
+              <label class="form-label" style="color: var(--danger);">Đội thua cuộc 🔴</label>
+              <div class="member-checkbox-list" id="editMatchLosingTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 51, 102, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 51, 102, 0.02);">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selection for Draw Match (Edit) -->
+        <div class="form-group" id="editMatchDrawGroup" style="display: none;">
+          <label class="form-label" style="color: var(--warning);">Thành viên tham gia (Hòa) 🤝</label>
+          <div class="member-checkbox-list" id="editMatchDrawTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 189, 46, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 189, 46, 0.02);">
             <!-- Populated by JS -->
           </div>
         </div>

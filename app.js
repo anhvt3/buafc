@@ -187,18 +187,28 @@ function resultLabel(r) {
 
 function selectResult(res, el, prefix = '') {
   const inputId = prefix ? prefix + 'MatchResult' : 'matchResult';
-  const groupId = prefix ? prefix + 'LosingTeamGroup' : 'losingTeamGroup';
+  const teamsGroupId = prefix ? prefix + 'MatchTeamsGroup' : 'matchTeamsGroup';
+  const drawGroupId = prefix ? prefix + 'MatchDrawGroup' : 'matchDrawGroup';
+  
   document.getElementById(inputId).value = res;
   if (el) {
     const sel = el.closest('.result-selector');
     if (sel) sel.querySelectorAll('.result-option').forEach(n => n.classList.remove('active'));
     el.classList.add('active');
   }
-  const group = document.getElementById(groupId);
+  
+  const teamsGroup = document.getElementById(teamsGroupId);
+  const drawGroup = document.getElementById(drawGroupId);
+  
   if (res === 'Thua') {
-    group.style.display = 'block';
+    if (teamsGroup) teamsGroup.style.display = 'block';
+    if (drawGroup) drawGroup.style.display = 'none';
+  } else if (res === 'Hòa') {
+    if (teamsGroup) teamsGroup.style.display = 'none';
+    if (drawGroup) drawGroup.style.display = 'block';
   } else {
-    group.style.display = 'none';
+    if (teamsGroup) teamsGroup.style.display = 'none';
+    if (drawGroup) drawGroup.style.display = 'none';
   }
 }
 
@@ -233,7 +243,9 @@ function handleFabClick() {
     document.getElementById('matchNote').value = '';
     document.getElementById('matchVenue').value = '';
     selectResult('Thua', document.querySelector('#modalMatch .result-option.lose'));
-    populateLosingTeamCheckboxes('matchLosingTeamCheckboxes');
+    populateMemberCheckboxes('matchWinningTeamCheckboxes');
+    populateMemberCheckboxes('matchLosingTeamCheckboxes');
+    populateMemberCheckboxes('matchDrawTeamCheckboxes');
     openModal('modalMatch');
   } else if (tab === 'tabFund') {
     if (state.currentSubTab === 'subtabSummary') {
@@ -254,8 +266,9 @@ function showSetup() {
   openModal('modalSetup');
 }
 
-function populateLosingTeamCheckboxes(containerId, checkedList = []) {
+function populateMemberCheckboxes(containerId, checkedList = []) {
   const container = document.getElementById(containerId);
+  if (!container) return;
   const activeMembers = state.members.filter(m => m.status === 'active');
   
   // Sort alphabetically
@@ -1211,6 +1224,15 @@ function renderLog() {
         </div>`;
     }
 
+    let drawHTML = '';
+    if (cls === 'draw' && playedTeam.length > 0) {
+      drawHTML = `
+        <div class="log-draw-title">🤝 Đội hình thi đấu (Hòa) (${playedTeam.length} người)</div>
+        <div class="log-draw-grid">
+          ${playedTeam.map(n => `<span class="log-draw-chip">${n}</span>`).join('')}
+        </div>`;
+    }
+
     let noteHTML = '';
     if (m.note) {
       noteHTML = `<div class="log-note">📝 ${m.note}</div>`;
@@ -1233,6 +1255,7 @@ function renderLog() {
       ${noteHTML}
       ${losingHTML}
       ${winningHTML}
+      ${drawHTML}
       ${statsHTML}
     </div>`;
   }).join('') || '<div class="empty-state"><p>Chưa có nhật ký trận đấu</p></div>';
@@ -1626,20 +1649,34 @@ async function saveMatch(btn) {
 
   if (!date || !result) { showToast('Vui lòng điền ngày và kết quả', 'error'); return; }
 
-  // Get checked losing team members
+  const winningTeam = [];
   const losingTeam = [];
+  const playedTeam = [];
+
   if (result === 'Thua') {
-    const checkboxes = document.querySelectorAll('#matchLosingTeamCheckboxes input[type="checkbox"]:checked');
-    checkboxes.forEach(cb => losingTeam.push(cb.value));
-    if (losingTeam.length === 0) {
-      showToast('Vui lòng chọn ít nhất một thành viên đội thua cuộc', 'error');
+    const winCbs = document.querySelectorAll('#matchWinningTeamCheckboxes input[type="checkbox"]:checked');
+    const loseCbs = document.querySelectorAll('#matchLosingTeamCheckboxes input[type="checkbox"]:checked');
+    
+    winCbs.forEach(cb => winningTeam.push(cb.value));
+    loseCbs.forEach(cb => losingTeam.push(cb.value));
+
+    if (winningTeam.length === 0 || losingTeam.length === 0) {
+      showToast('Vui lòng chọn thành viên cho cả đội thắng và đội thua', 'error');
+      return;
+    }
+    playedTeam.push(...winningTeam, ...losingTeam);
+  } else if (result === 'Hòa') {
+    const drawCbs = document.querySelectorAll('#matchDrawTeamCheckboxes input[type="checkbox"]:checked');
+    drawCbs.forEach(cb => playedTeam.push(cb.value));
+    if (playedTeam.length === 0) {
+      showToast('Vui lòng chọn ít nhất một thành viên tham gia', 'error');
       return;
     }
   }
 
   const lock = lockButton(btn || event?.target);
   const timestamp = new Date().toISOString();
-  const newMatch = { timestamp, date, opponent, result, note, venue, losingTeam };
+  const newMatch = { timestamp, date, opponent, result, note, venue, losingTeam, winningTeam, playedTeam };
   state.matches.push(newMatch);
 
   // Generate fund payments for the losing team
@@ -1808,13 +1845,11 @@ function openEditMatch(date) {
     });
   }
   
-  const group = document.getElementById('editLosingTeamGroup');
-  if (m.result === 'Thua') {
-    group.style.display = 'block';
-    populateLosingTeamCheckboxes('editMatchLosingTeamCheckboxes', m.losingTeam || []);
-  } else {
-    group.style.display = 'none';
-  }
+  selectResult(m.result || 'Thua', null, 'edit');
+  
+  populateMemberCheckboxes('editMatchWinningTeamCheckboxes', m.winningTeam || []);
+  populateMemberCheckboxes('editMatchLosingTeamCheckboxes', m.losingTeam || []);
+  populateMemberCheckboxes('editMatchDrawTeamCheckboxes', m.playedTeam || []);
   
   openModal('modalMatchEdit');
 }
@@ -1830,12 +1865,27 @@ async function updateMatch(btn) {
   const m = state.matches.find(x => x.date === idDate);
   if (!m) return;
 
+  const winningTeam = [];
   const losingTeam = [];
+  const playedTeam = [];
+
   if (result === 'Thua') {
-    const checkboxes = document.querySelectorAll('#editMatchLosingTeamCheckboxes input[type="checkbox"]:checked');
-    checkboxes.forEach(cb => losingTeam.push(cb.value));
-    if (losingTeam.length === 0) {
-      showToast('Vui lòng chọn ít nhất một thành viên đội thua cuộc', 'error');
+    const winCbs = document.querySelectorAll('#editMatchWinningTeamCheckboxes input[type="checkbox"]:checked');
+    const loseCbs = document.querySelectorAll('#editMatchLosingTeamCheckboxes input[type="checkbox"]:checked');
+    
+    winCbs.forEach(cb => winningTeam.push(cb.value));
+    loseCbs.forEach(cb => losingTeam.push(cb.value));
+
+    if (winningTeam.length === 0 || losingTeam.length === 0) {
+      showToast('Vui lòng chọn thành viên cho cả đội thắng và đội thua', 'error');
+      return;
+    }
+    playedTeam.push(...winningTeam, ...losingTeam);
+  } else if (result === 'Hòa') {
+    const drawCbs = document.querySelectorAll('#editMatchDrawTeamCheckboxes input[type="checkbox"]:checked');
+    drawCbs.forEach(cb => playedTeam.push(cb.value));
+    if (playedTeam.length === 0) {
+      showToast('Vui lòng chọn ít nhất một thành viên tham gia', 'error');
       return;
     }
   }
@@ -1845,7 +1895,13 @@ async function updateMatch(btn) {
   const prevFunds = [...state.fundPayments];
 
   // Update match details
-  m.date = date; m.result = result; m.venue = venue; m.note = note; m.losingTeam = losingTeam;
+  m.date = date; 
+  m.result = result; 
+  m.venue = venue; 
+  m.note = note; 
+  m.losingTeam = losingTeam;
+  m.winningTeam = winningTeam;
+  m.playedTeam = playedTeam;
 
   // Recalculate fund payments for this match: remove old, push new
   state.fundPayments = state.fundPayments.filter(p => !p.timestamp.startsWith(idDate));
@@ -1864,7 +1920,7 @@ async function updateMatch(btn) {
 
   save(); renderAll(); closeModal('modalMatchEdit');
 
-  const ok = await apiCall('/api/matches', 'PUT', { id: idDate, date, opponent: "Nội bộ", venue, result, note, losingTeam });
+  const ok = await apiCall('/api/matches', 'PUT', { id: idDate, date, opponent: "Nội bộ", venue, result, note, losingTeam, winningTeam, playedTeam });
   if (!ok && state.apiUrl) {
     Object.assign(m, prev);
     state.fundPayments = prevFunds;

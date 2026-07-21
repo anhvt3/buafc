@@ -981,6 +981,32 @@ h1, h2, h3, .stat-value, .stat-label, .period-total, .quarter-summary-title,
   color: #6ee7b7;
   border: 1px solid rgba(16,185,129,0.2);
 }
+.log-draw-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--draw);
+  margin-top: 10px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.log-draw-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.log-draw-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: rgba(245,158,11,0.1);
+  color: #fde047;
+  border: 1px solid rgba(245,158,11,0.2);
+}
 .log-stats-row {
   display: flex;
   gap: 12px;

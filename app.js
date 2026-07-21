@@ -560,41 +560,103 @@ function renderWinRateChart(fines, draws, cancelled) {
 let monthChart = null;
 function renderMonthlyChart() {
   const thuByMonth = {};
+  const chiByMonth = {};
+  const allMonthsSet = new Set();
+
+  // 1. Fines (Thu)
   state.fundPayments.forEach(p => {
     const k = getMonthKey(p.timestamp);
-    if (!k) return;
+    if (!k || k.length < 7) return;
     thuByMonth[k] = (thuByMonth[k] || 0) + (Number(p.amount) || 0);
+    allMonthsSet.add(k);
   });
 
-  const keys = Object.keys(thuByMonth).sort();
-  const labels = keys.map(k => { const [y, m] = k.split('-'); return `T${+m}/${y.slice(2)}`; });
-  const thuData = keys.map(k => thuByMonth[k] || 0);
+  // 2. Contributions (Thu)
+  state.quarterlyContributions.forEach(c => {
+    for (let q = 1; q <= 4; q++) {
+      const dateVal = c[`q${q}_date`] || '';
+      const amtVal = Number(c[`q${q}_amount`]) || 0;
+      if (amtVal > 0 && dateVal && dateVal.length >= 7) {
+        const k = getMonthKey(dateVal);
+        if (k) {
+          thuByMonth[k] = (thuByMonth[k] || 0) + amtVal;
+          allMonthsSet.add(k);
+        }
+      }
+    }
+  });
+
+  // 3. Expenses (Chi)
+  state.expenses.forEach(e => {
+    const k = getMonthKey(e.date);
+    if (!k || k.length < 7) return;
+    chiByMonth[k] = (chiByMonth[k] || 0) + (Number(e.amount) || 0);
+    allMonthsSet.add(k);
+  });
+
+  const sortedMonths = Array.from(allMonthsSet).sort();
+
+  if (sortedMonths.length === 0) {
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    sortedMonths.push(currentMonth);
+  }
+
+  const labels = sortedMonths.map(k => {
+    const [y, m] = k.split('-');
+    return `T${+m}/${y.slice(2)}`;
+  });
+
+  const thuData = sortedMonths.map(k => thuByMonth[k] || 0);
+  const chiData = sortedMonths.map(k => chiByMonth[k] || 0);
 
   const canvas = document.getElementById('monthlyChart');
   if (monthChart) monthChart.destroy();
+
   monthChart = new Chart(canvas, {
     type: 'bar',
     data: {
       labels,
       datasets: [
         {
-          label: 'Tiền phạt thu',
+          label: 'Thu',
           data: thuData,
-          backgroundColor: 'rgba(239,68,68,0.7)',
-          borderColor: '#ef4444',
-          borderWidth: 1,
+          backgroundColor: 'rgba(0, 255, 149, 0.75)',
+          borderColor: 'var(--accent)',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: 'Chi',
+          data: chiData,
+          backgroundColor: 'rgba(255, 51, 102, 0.75)',
+          borderColor: 'var(--danger)',
+          borderWidth: 1.5,
           borderRadius: 4,
         }
       ]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { display: false }
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            color: '#94a3b8',
+            font: { size: 9, family: 'Space Grotesk' }
+          }
+        }
       },
       scales: {
-        x: { ticks: { color: '#6b7280', font: { size: 9 } }, grid: { display: false } },
-        y: { ticks: { color: '#6b7280', font: { size: 9 }, callback: v => fmt(v) }, grid: { color: '#333a4a' } }
+        x: { 
+          ticks: { color: '#64748b', font: { size: 9 } }, 
+          grid: { display: false } 
+        },
+        y: { 
+          ticks: { color: '#64748b', font: { size: 9 }, callback: v => fmt(v) }, 
+          grid: { color: '#242938' } 
+        }
       }
     }
   });

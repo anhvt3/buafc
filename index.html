@@ -631,6 +631,22 @@
     <div class="toast" id="toast"></div>
   </div>
 
+  <script>
+    // Anti-DevTools & Inspect Protection
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    document.addEventListener('keydown', function(e) {
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+        (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's')) ||
+        (e.metaKey && e.altKey && (e.key === 'I' || e.key === 'i'))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    });
+  </script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

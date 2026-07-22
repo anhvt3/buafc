@@ -1,4 +1,5 @@
-const DATA_VERSION = "buafc-2026-07-16-v8";
+const DATA_VERSION = "buafc-2026-07-22-v9";
+
 
 const INITIAL_MEMBERS = [
   { name: "Vũ Thế Anh", status: "active" },
@@ -47,7 +48,8 @@ const INITIAL_MATCHES = [
   { date: "2026-06-16", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Vũ Thế Anh", "Trịnh Minh Châm", "Nguyễn Minh"], playedTeam: ["Vũ Thế Anh", "Trịnh Minh Châm", "Nguyễn Minh", "Đoàn Thế Anh", "Hà Phú", "Nguyễn Quang Tuyên", "Hùng Chu", "Nguyễn Viết Hòa", "Trần Việt Hưng", "Trần Văn Tuấn", "Nguyễn Ngọc Quý", "Nguyễn Quang Thái", "Phạm Duy", "Phạm Tiến Hùng", "Trần Đức"] },
   { date: "2026-06-23", opponent: "Nội bộ", result: "Hòa", cost: 0, note: "Hòa 4-4", losingTeam: [], playedTeam: ["Phạm Duy Tiên", "Nguyễn Ngọc Quý", "Vũ Văn An", "Nguyễn Quang Thái", "Vũ Thế Anh", "Hà Phú", "Đoàn Thế Anh", "Trịnh Minh Châm", "Nguyễn Viết Hòa", "Trần Văn Tuấn", "Nguyễn Minh", "Trần Đức", "Phạm Tiến Hùng", "Hồ Trọng Thuân"] },
   { date: "2026-07-07", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Nguyễn Quang Thái", "Nguyễn Minh", "Nguyễn Khắc Dũng", "Trần Việt Hưng", "Trần Văn Tuấn", "Vũ Văn An"], playedTeam: ["Nguyễn Quang Thái", "Nguyễn Minh", "Nguyễn Khắc Dũng", "Trần Việt Hưng", "Trần Văn Tuấn", "Vũ Văn An", "Phạm Duy Tiên", "Nguyễn Ngọc Quý", "Phạm Tiến Hùng", "Trịnh Minh Châm", "Nguyễn Viết Hòa", "Phạm Duy", "Lê Ngọc Tân"] },
-  { date: "2026-07-14", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Hà Phú", "Nguyễn Ngọc Quý"], playedTeam: ["Nguyễn Quang Thái", "Nguyễn Minh", "Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Vũ Thế Anh", "Nguyễn Khắc Dũng", "Minh Quyền", "Dương Duy", "Trần Đức", "Vũ Văn An", "Hà Phú", "Nguyễn Ngọc Quý"] }
+  { date: "2026-07-14", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Hà Phú", "Nguyễn Ngọc Quý"], playedTeam: ["Nguyễn Quang Thái", "Nguyễn Minh", "Nguyễn Viết Hòa", "Trần Văn Tuấn", "Hùng Chu", "Trịnh Minh Châm", "Phạm Tiến Hùng", "Vũ Thế Anh", "Nguyễn Khắc Dũng", "Minh Quyền", "Dương Duy", "Trần Đức", "Vũ Văn An", "Hà Phú", "Nguyễn Ngọc Quý"] },
+  { date: "2026-07-21", opponent: "Nội bộ", result: "Thua", cost: 0, note: "", losingTeam: ["Đoàn Thế Anh", "Hà Phú", "Lê Ngọc Tân", "Nguyễn Minh", "Nguyễn Quang Thái", "Phạm Duy Tiên", "Vũ Thế Anh", "Vũ Văn An"], playedTeam: ["Đoàn Thế Anh", "Hà Phú", "Lê Ngọc Tân", "Nguyễn Minh", "Nguyễn Quang Thái", "Phạm Duy Tiên", "Vũ Thế Anh", "Vũ Văn An", "Nguyễn Ngọc Quý", "Nguyễn Viết Hòa", "Phạm Duy", "Phạm Tiến Hùng", "Trần Đức", "Trịnh Minh Châm"] }
 ];
 
 const INITIAL_FIXTURES = [];

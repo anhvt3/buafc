@@ -1609,7 +1609,7 @@ function renderPairs() {
   });
 
   const bestPairs = [...validPairs].sort((a, b) => b.winRate - a.winRate || b.ppg - a.ppg || b.together - a.together);
-  const worstPairs = [...validPairs].sort((a, b) => a.winRate - b.winRate || a.ppg - b.ppg || a.together - b.together);
+  const worstPairs = [...validPairs].filter(p => p.wins > 0).sort((a, b) => a.winRate - b.winRate || a.ppg - b.ppg || a.together - b.together);
 
   const rowHTML = (p, idx, isBest) => {
     const rateClass = isBest ? 'best' : 'worst';

@@ -1335,7 +1335,7 @@ function renderLog() {
   }).join('') || '<div class="empty-state"><p>Chưa có nhật ký trận đấu</p></div>';
 }
 
-let formLineChart = null;
+
 let costResultBarChart = null;
 let memberStackedChart = null;
 let memberPercentStackedChart = null;
@@ -1403,77 +1403,8 @@ function renderCharts() {
   const fgEl = document.getElementById('recentFormGuide');
   if (fgEl) fgEl.innerHTML = formGuideHtml || '<div class="empty-state"><p>Chưa có dữ liệu</p></div>';
 
-  // 1. Quỹ đạo kết quả trận đấu (16 trận)
-  const sortedMatches = [...state.matches].sort((a, b) => a.date.localeCompare(b.date));
-  const lineLabels = sortedMatches.map(m => {
-    const parts = m.date.split('-');
-    return `${parts[2]}/${parts[1]}`;
-  });
 
-  const lineData = sortedMatches.map(m => {
-    const r = classifyResult(m.result);
-    return r === 'lose' ? -1 : r === 'draw' ? 0 : r === 'cancelled' ? 0.5 : 1;
-  });
 
-  const lineColors = sortedMatches.map(m => {
-    const r = classifyResult(m.result);
-    return r === 'lose' ? '#ff005c' : r === 'draw' ? '#00ffff' : '#6b7280';
-  });
-
-  const ctxLine = document.getElementById('formLineChart');
-  if (formLineChart) formLineChart.destroy();
-  if (ctxLine) {
-    formLineChart = new Chart(ctxLine, {
-      type: 'line',
-      data: {
-        labels: lineLabels,
-        datasets: [{ 
-          label: 'Trận đấu', 
-          data: lineData, 
-          borderColor: 'rgba(255,255,255,0.2)', 
-          borderWidth: 2,
-          pointBackgroundColor: lineColors, 
-          pointBorderColor: '#1e1e2f',
-          pointBorderWidth: 2,
-          pointRadius: 6,
-          tension: 0.2
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const idx = context.dataIndex;
-                const m = sortedMatches[idx];
-                return ` Ngày: ${fmtDate(m.date)} | Kết quả: ${m.result}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: { ticks: { color: '#9ca3af', font: { size: 9 } }, grid: { display: false } },
-          y: { 
-            min: -1.5, max: 1.5,
-            ticks: { 
-              color: '#e2e8f0', font: { size: 10, weight: 'bold' },
-              stepSize: 1,
-              callback: function(value) {
-                if (value === 1) return 'Xong';
-                if (value === 0.5) return 'Hoãn';
-                if (value === 0) return 'Hòa';
-                if (value === -1) return 'Có Phạt';
-                return '';
-              }
-            }, 
-            grid: { color: 'rgba(255,255,255,0.05)' } 
-          }
-        }
-      }
-    });
-  }
 
   // 2. Biểu đồ xếp hạng phạt thua các thành viên
   const sortedStats = Object.values(state.memberStatsCache)

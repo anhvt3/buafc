@@ -31,7 +31,7 @@ function init() {
       ['fc_members', 'fc_matches', 'fc_fund', 'fc_quarterly_contributions', 'fc_expenses'].forEach(k => localStorage.removeItem(k));
       localStorage.setItem('fc_data_version', DATA_VERSION);
     }
-  } catch (e) { /* localStorage blocked */ }
+  } catch (e) {}
   state.members = safeParse('fc_members', null) || [...INITIAL_MEMBERS];
   state.matches = safeParse('fc_matches', null) || [...INITIAL_MATCHES];
   state.fundPayments = safeParse('fc_fund', null) || [...INITIAL_FUND_PAYMENTS];
@@ -41,8 +41,70 @@ function init() {
   updateSyncStatus();
   renderAll();
   
+  syncFromCloud();
+  
   if (state.apiUrl) {
     syncFromSheet();
+  }
+}
+
+let _cloudSaving = false;
+
+function syncFromCloud() {
+  fetch('/api/sync').then(r => r.json()).then(data => {
+    if (!data) return;
+    if (data.members) state.members = data.members;
+    if (data.matches) state.matches = data.matches;
+    if (data.fundPayments) state.fundPayments = data.fundPayments;
+    if (data.quarterlyContributions) state.quarterlyContributions = data.quarterlyContributions;
+    if (data.expenses) state.expenses = data.expenses;
+    try {
+      localStorage.setItem('fc_members', JSON.stringify(state.members));
+      localStorage.setItem('fc_matches', JSON.stringify(state.matches));
+      localStorage.setItem('fc_fund', JSON.stringify(state.fundPayments));
+      localStorage.setItem('fc_quarterly_contributions', JSON.stringify(state.quarterlyContributions));
+      localStorage.setItem('fc_expenses', JSON.stringify(state.expenses));
+    } catch (e) {}
+    renderAll();
+    updateSyncDot('synced');
+  }).catch(() => {
+    updateSyncDot('offline');
+  });
+}
+
+function syncToCloud() {
+  if (_cloudSaving) return;
+  _cloudSaving = true;
+  fetch('/api/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      members: state.members,
+      matches: state.matches,
+      fundPayments: state.fundPayments,
+      quarterlyContributions: state.quarterlyContributions,
+      expenses: state.expenses
+    })
+  }).then(r => r.json()).then(() => {
+    updateSyncDot('synced');
+  }).catch(() => {
+    updateSyncDot('offline');
+  }).finally(() => { _cloudSaving = false; });
+}
+
+function updateSyncDot(status) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  if (!dot) return;
+  if (status === 'synced') {
+    dot.style.background = '#10b981';
+    if (text) text.textContent = 'Đã đồng bộ';
+  } else if (status === 'offline') {
+    dot.style.background = '#ef4444';
+    if (text) text.textContent = 'Offline';
+  } else {
+    dot.style.background = '#f59e0b';
+    if (text) text.textContent = 'Đang đồng bộ...';
   }
 }
 
@@ -137,6 +199,7 @@ function save() {
       showToast('Trình duyệt chặn lưu cục bộ — dữ liệu sẽ mất khi reload', 'error');
     }
   }
+  syncToCloud();
 }
 
 function fmt(n) {

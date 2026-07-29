@@ -2267,7 +2267,7 @@ function renderTopScorers() {
       </div>
       <div class="goals">${e[1].goals}</div>
     </div>`;
-  }).join('');
+  }).join('') + '<div style="text-align:center;font-size:0.7rem;color:#666;margin-top:8px;font-style:italic">Dữ liệu từ 28/7/2026</div>';
 }
 
 

@@ -1637,7 +1637,7 @@ function renderPairs() {
       </div>
     </div>
     <div class="pairs-subsection" style="margin-top: 10px;">
-      <div class="pairs-subsection-title">⚠️ TOP CẶP THI ĐẤU KÉM ĂN Ý</div>
+      <div class="pairs-subsection-title">😅 TOP CẶP HAY THUA CHUNG</div>
       <div class="pairs-list">
         ${worstPairs.slice(0, 5).map((p, idx) => rowHTML(p, idx, false)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
       </div>

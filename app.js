@@ -1629,17 +1629,32 @@ function renderPairs() {
     </div>`;
   };
 
+  function diversify(list, max) {
+    const count = {};
+    return list.filter(p => {
+      const c1 = count[p.p1] || 0;
+      const c2 = count[p.p2] || 0;
+      if (c1 >= max && c2 >= max) return false;
+      count[p.p1] = c1 + 1;
+      count[p.p2] = c2 + 1;
+      return true;
+    });
+  }
+
+  const topBest = diversify(bestPairs, 2).slice(0, 5);
+  const topWorst = diversify(worstPairs, 2).slice(0, 5);
+
   container.innerHTML = `
     <div class="pairs-subsection">
       <div class="pairs-subsection-title">👑 TOP CẶP BÀI TRÙNG ĂN Ý NHẤT</div>
       <div class="pairs-list">
-        ${bestPairs.slice(0, 5).map((p, idx) => rowHTML(p, idx, true)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
+        ${topBest.map((p, idx) => rowHTML(p, idx, true)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
       </div>
     </div>
     <div class="pairs-subsection" style="margin-top: 10px;">
       <div class="pairs-subsection-title">😅 TOP CẶP HAY THUA CHUNG</div>
       <div class="pairs-list">
-        ${worstPairs.slice(0, 5).map((p, idx) => rowHTML(p, idx, false)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
+        ${topWorst.map((p, idx) => rowHTML(p, idx, false)).join('') || '<div class="empty-state">Chưa đủ dữ liệu</div>'}
       </div>
     </div>
   `;

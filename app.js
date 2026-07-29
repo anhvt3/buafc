@@ -997,7 +997,9 @@ function renderFund() {
   else if (state.currentSubTab === 'subtabFines') {
     document.getElementById('fundPeriodTotal').textContent = fmt(totalFines) + 'đ';
 
+    const pausedNames = new Set(state.members.filter(m => m.status === 'paused').map(m => normName(m.name)));
     const sortedList = Object.values(state.memberStatsCache)
+      .filter(item => !pausedNames.has(normName(item.name)))
       .sort((a, b) => b.fineAmount - a.fineAmount || a.name.localeCompare(b.name, 'vi'));
 
     document.getElementById('fundList').innerHTML = sortedList.map(item => {
@@ -1407,8 +1409,9 @@ function renderCharts() {
 
 
   // 2. Biểu đồ xếp hạng phạt thua các thành viên
+  const pausedSet = new Set(state.members.filter(m => m.status === 'paused').map(m => normName(m.name)));
   const sortedStats = Object.values(state.memberStatsCache)
-    .filter(item => item.fineAmount > 0)
+    .filter(item => item.fineAmount > 0 && !pausedSet.has(normName(item.name)))
     .sort((a, b) => b.fineAmount - a.fineAmount || a.name.localeCompare(b.name, 'vi'));
 
   const displayStats = showAllPenalties ? sortedStats : sortedStats.slice(0, 10);
@@ -1462,6 +1465,7 @@ function renderCharts() {
 
   // 3. Biểu đồ Stacked Bar Chart phân tích phong độ chi tiết từng thành viên
   const memberStackedData = state.members
+    .filter(m => m.status !== 'paused')
     .map(m => state.memberStatsCache[normName(m.name)])
     .filter(p => p && p.played > 0)
     .map(p => ({

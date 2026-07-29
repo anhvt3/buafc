@@ -1212,10 +1212,10 @@ function renderMembers() {
 
   const MIN_MATCHES = 3;
   const sorted = membersWithStats.sort((a, b) => {
-    const aEnough = a.stats.played >= MIN_MATCHES ? 1 : 0;
-    const bEnough = b.stats.played >= MIN_MATCHES ? 1 : 0;
-    if (aEnough !== bEnough) return bEnough - aEnough;
-    return b.stats.lossRate - a.stats.lossRate || b.stats.losses - a.stats.losses || a.name.localeCompare(b.name, 'vi');
+    const aPaused = a.status === 'paused' ? 1 : 0;
+    const bPaused = b.status === 'paused' ? 1 : 0;
+    if (aPaused !== bPaused) return aPaused - bPaused;
+    return a.name.localeCompare(b.name, 'vi');
   });
 
   document.getElementById('memberList').innerHTML = sorted.map((m, i) => {

@@ -239,14 +239,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('active')
 function handleFabClick() {
   const tab = state.currentTab;
   if (tab === 'tabMatches' || tab === 'tabDashboard') {
-    document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('matchNote').value = '';
-    document.getElementById('matchVenue').value = '';
-    selectResult('Thua', document.querySelector('#modalMatch .result-option.lose'));
-    populateMemberCheckboxes('matchWinningTeamCheckboxes');
-    populateMemberCheckboxes('matchLosingTeamCheckboxes');
-    populateMemberCheckboxes('matchDrawTeamCheckboxes');
-    openModal('modalMatch');
+    openMatchWizard();
   } else if (tab === 'tabFund') {
     if (state.currentSubTab === 'subtabSummary') {
       populateExpenseModal();
@@ -502,6 +495,7 @@ function renderAll() {
   renderMembers();
   renderLog();
   renderCharts();
+  renderTopScorers();
 }
 
 function renderDashboard() {
@@ -693,10 +687,16 @@ function matchItemHTML(m) {
   const cls = classifyResult(m.result);
   const safeTs = String(m.date || '').replace(/'/g, "\\'");
   const losingCount = m.losingTeam ? m.losingTeam.length : 0;
-  return `<div class="match-item" onclick="openEditMatch('${safeTs}')" style="cursor:pointer">
+  
+  let scoreStr = '';
+  if (cls === 'lose' && m.scoreA != null && m.scoreB != null) {
+    scoreStr = ` <span style="font-weight:900;color:var(--accent)">${m.scoreA}</span> - <span style="font-weight:900;color:var(--danger)">${m.scoreB}</span>`;
+  }
+  
+  return `<div class="match-item" onclick="openMatchWizard('${safeTs}')" style="cursor:pointer">
     <div class="match-result-badge ${cls}">${resultLabel(m.result)}</div>
     <div class="match-info">
-      <div class="match-opponent">${m.opponent}${m.note ? ' · ' + m.note : ''}</div>
+      <div class="match-opponent">${m.opponent}${scoreStr}${m.note ? ' · ' + m.note : ''}</div>
       <div class="match-date">${fmtDate(m.date)}${losingCount ? ' · Đội thua: ' + losingCount + ' người' : ''}</div>
     </div>
     <div class="match-cost">${losingCount ? fmt(losingCount * 20000) + 'đ' : '0đ'}</div>
@@ -1202,7 +1202,10 @@ function renderLog() {
 
     let resultText = '';
     let resultEmoji = '';
-    if (cls === 'lose') { resultText = 'Có phạt'; resultEmoji = '❌'; }
+    if (cls === 'lose') { 
+      resultText = (m.scoreA != null && m.scoreB != null) ? `${m.scoreA} - ${m.scoreB}` : 'Có phạt'; 
+      resultEmoji = '❌'; 
+    }
     else if (cls === 'draw') { resultText = 'Hòa'; resultEmoji = '🤝'; }
     else if (cls === 'cancelled') { resultText = 'Hoãn'; resultEmoji = '🌧️'; }
 
@@ -1239,9 +1242,17 @@ function renderLog() {
     }
 
     let statsHTML = '';
+    let scorersStr = '';
+    
+    if (m.scorers) {
+      const sList = Object.entries(m.scorers).filter(x => x[1] > 0).map(x => `⚽ ${x[0]}${x[1] > 1 ? ' ×'+x[1] : ''}`);
+      if (sList.length > 0) scorersStr = `<div class="log-note" style="color:var(--accent);font-size:0.8rem;margin-top:6px">${sList.join(' · ')}</div>`;
+    }
+
     if (playedTeam.length > 0) {
       statsHTML = `
-        <div class="log-stats-row">
+        ${scorersStr}
+        <div class="log-stats-row" style="margin-top:10px">
           <div class="log-stat">👥 Tham gia: <strong>${playedTeam.length}</strong></div>
           ${losingTeam.length > 0 ? `<div class="log-stat">💰 Phạt: <strong>${fmt(losingTeam.length * 20000)}đ</strong></div>` : ''}
         </div>`;
@@ -1640,73 +1651,7 @@ function renderPairs() {
   `;
 }
 
-async function saveMatch(btn) {
-  const date = document.getElementById('matchDate').value;
-  const opponent = "Nội bộ";
-  const result = document.getElementById('matchResult').value;
-  const note = document.getElementById('matchNote').value;
-  const venue = document.getElementById('matchVenue').value;
 
-  if (!date || !result) { showToast('Vui lòng điền ngày và kết quả', 'error'); return; }
-
-  const winningTeam = [];
-  const losingTeam = [];
-  const playedTeam = [];
-
-  if (result === 'Thua') {
-    const winCbs = document.querySelectorAll('#matchWinningTeamCheckboxes input[type="checkbox"]:checked');
-    const loseCbs = document.querySelectorAll('#matchLosingTeamCheckboxes input[type="checkbox"]:checked');
-    
-    winCbs.forEach(cb => winningTeam.push(cb.value));
-    loseCbs.forEach(cb => losingTeam.push(cb.value));
-
-    if (winningTeam.length === 0 || losingTeam.length === 0) {
-      showToast('Vui lòng chọn thành viên cho cả đội thắng và đội thua', 'error');
-      return;
-    }
-    playedTeam.push(...winningTeam, ...losingTeam);
-  } else if (result === 'Hòa') {
-    const drawCbs = document.querySelectorAll('#matchDrawTeamCheckboxes input[type="checkbox"]:checked');
-    drawCbs.forEach(cb => playedTeam.push(cb.value));
-    if (playedTeam.length === 0) {
-      showToast('Vui lòng chọn ít nhất một thành viên tham gia', 'error');
-      return;
-    }
-  }
-
-  const lock = lockButton(btn || event?.target);
-  const timestamp = new Date().toISOString();
-  const newMatch = { timestamp, date, opponent, result, note, venue, losingTeam, winningTeam, playedTeam };
-  state.matches.push(newMatch);
-
-  // Generate fund payments for the losing team
-  if (result === 'Thua') {
-    losingTeam.forEach(mem => {
-      state.fundPayments.push({
-        timestamp: date + " 21:00:00",
-        period: "Phạt thua",
-        member: mem,
-        amount: 20000,
-        note: `Phạt trận ngày ${date.split('-').reverse().slice(0, 2).join('/')}`,
-        periodRaw: "Phạt thua"
-      });
-    });
-  }
-
-  save(); renderAll(); closeModal('modalMatch');
-
-  // BFF call (mock offline first)
-  const ok = await apiCall('/api/matches', 'POST', newMatch);
-  if (!ok && state.apiUrl) {
-    state.matches = state.matches.filter(m => m !== newMatch);
-    state.fundPayments = state.fundPayments.filter(p => !p.timestamp.startsWith(date));
-    save(); renderAll();
-    showToast('Lỗi kết nối — đã hoàn tác', 'error');
-    lock.release(); return;
-  }
-  showToast('Đã thêm trận đấu nội bộ ⚽');
-  lock.release();
-}
 
 function populateFundModal() {
   const selM = document.getElementById('fundMember');
@@ -1829,112 +1774,14 @@ async function deleteMember(btn) {
   lock.release();
 }
 
-function openEditMatch(date) {
-  const m = state.matches.find(x => x.date === date);
-  if (!m) return;
-  document.getElementById('editMatchId').value = m.date; // Use date as identifier for edit
-  document.getElementById('editMatchDate').value = m.date;
-  document.getElementById('editMatchVenue').value = m.venue || '';
-  document.getElementById('editMatchResult').value = m.result || 'Thua';
-  document.getElementById('editMatchNote').value = m.note || '';
 
-  const sel = document.querySelector('#modalMatchEdit .result-selector');
-  if (sel) {
-    sel.querySelectorAll('.result-option').forEach(n => {
-      n.classList.toggle('active', n.textContent.trim().startsWith(m.result === 'Thua' ? 'Đá xong' : m.result));
-    });
-  }
-  
-  selectResult(m.result || 'Thua', null, 'edit');
-  
-  populateMemberCheckboxes('editMatchWinningTeamCheckboxes', m.winningTeam || []);
-  populateMemberCheckboxes('editMatchLosingTeamCheckboxes', m.losingTeam || []);
-  populateMemberCheckboxes('editMatchDrawTeamCheckboxes', m.playedTeam || []);
-  
-  openModal('modalMatchEdit');
-}
 
-async function updateMatch(btn) {
-  const idDate = document.getElementById('editMatchId').value;
-  const date = document.getElementById('editMatchDate').value;
-  const result = document.getElementById('editMatchResult').value;
-  const venue = document.getElementById('editMatchVenue').value.trim();
-  const note = document.getElementById('editMatchNote').value.trim();
 
-  if (!date || !result) return showToast('Vui lòng điền ngày và kết quả', 'error');
-  const m = state.matches.find(x => x.date === idDate);
-  if (!m) return;
-
-  const winningTeam = [];
-  const losingTeam = [];
-  const playedTeam = [];
-
-  if (result === 'Thua') {
-    const winCbs = document.querySelectorAll('#editMatchWinningTeamCheckboxes input[type="checkbox"]:checked');
-    const loseCbs = document.querySelectorAll('#editMatchLosingTeamCheckboxes input[type="checkbox"]:checked');
-    
-    winCbs.forEach(cb => winningTeam.push(cb.value));
-    loseCbs.forEach(cb => losingTeam.push(cb.value));
-
-    if (winningTeam.length === 0 || losingTeam.length === 0) {
-      showToast('Vui lòng chọn thành viên cho cả đội thắng và đội thua', 'error');
-      return;
-    }
-    playedTeam.push(...winningTeam, ...losingTeam);
-  } else if (result === 'Hòa') {
-    const drawCbs = document.querySelectorAll('#editMatchDrawTeamCheckboxes input[type="checkbox"]:checked');
-    drawCbs.forEach(cb => playedTeam.push(cb.value));
-    if (playedTeam.length === 0) {
-      showToast('Vui lòng chọn ít nhất một thành viên tham gia', 'error');
-      return;
-    }
-  }
-
-  const lock = lockButton(btn || event?.target);
-  const prev = { ...m };
-  const prevFunds = [...state.fundPayments];
-
-  // Update match details
-  m.date = date; 
-  m.result = result; 
-  m.venue = venue; 
-  m.note = note; 
-  m.losingTeam = losingTeam;
-  m.winningTeam = winningTeam;
-  m.playedTeam = playedTeam;
-
-  // Recalculate fund payments for this match: remove old, push new
-  state.fundPayments = state.fundPayments.filter(p => !p.timestamp.startsWith(idDate));
-  if (result === 'Thua') {
-    losingTeam.forEach(mem => {
-      state.fundPayments.push({
-        timestamp: date + " 21:00:00",
-        period: "Phạt thua",
-        member: mem,
-        amount: 20000,
-        note: `Phạt trận ngày ${date.split('-').reverse().slice(0, 2).join('/')}`,
-        periodRaw: "Phạt thua"
-      });
-    });
-  }
-
-  save(); renderAll(); closeModal('modalMatchEdit');
-
-  const ok = await apiCall('/api/matches', 'PUT', { id: idDate, date, opponent: "Nội bộ", venue, result, note, losingTeam, winningTeam, playedTeam });
-  if (!ok && state.apiUrl) {
-    Object.assign(m, prev);
-    state.fundPayments = prevFunds;
-    save(); renderAll();
-    showToast('Lỗi kết nối — đã hoàn tác', 'error');
-    lock.release(); return;
-  }
-  showToast('Đã cập nhật trận đấu ⚽');
-  lock.release();
-}
 
 async function deleteMatch(btn) {
   if (!confirm('Xóa trận đấu này và toàn bộ khoản phạt liên quan?')) return;
-  const idDate = document.getElementById('editMatchId').value;
+  const idDate = document.getElementById('wizardMatchId').value;
+  if (!idDate) return;
   const lock = lockButton(btn || event?.target);
   const prevMatches = [...state.matches];
   const prevFunds = [...state.fundPayments];
@@ -1942,7 +1789,7 @@ async function deleteMatch(btn) {
   state.matches = state.matches.filter(x => x.date !== idDate);
   state.fundPayments = state.fundPayments.filter(p => !p.timestamp.startsWith(idDate));
 
-  save(); renderAll(); closeModal('modalMatchEdit');
+  save(); renderAll(); closeModal('modalMatchWizard');
 
   const ok = await apiCall('/api/matches', 'DELETE', { id: idDate });
   if (!ok && state.apiUrl) {
@@ -2067,5 +1914,298 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     if (e.target === overlay) overlay.classList.remove('active');
   });
 });
+
+
+// --- WIZARD & SCORERS ---
+let currentWizardStep = 1;
+let wizardMatchData = {};
+
+function openMatchWizard(editDate) {
+  currentWizardStep = 1;
+  const isEdit = !!editDate;
+  
+  if (isEdit) {
+    const m = state.matches.find(x => x.date === editDate);
+    if (!m) return;
+    document.getElementById('wizardMatchId').value = m.date;
+    document.getElementById('wizardMatchDate').value = m.date;
+    document.getElementById('wizardMatchVenue').value = m.venue || '';
+    document.getElementById('wizardMatchNote').value = m.note || '';
+    
+    selectResult(m.result || 'Thua', document.querySelector('#modalMatchWizard .result-option.' + classifyResult(m.result)), 'wizard');
+    
+    populateMemberCheckboxes('wizardMatchWinningTeamCheckboxes', m.winningTeam || []);
+    populateMemberCheckboxes('wizardMatchLosingTeamCheckboxes', m.losingTeam || []);
+    populateMemberCheckboxes('wizardMatchDrawTeamCheckboxes', m.playedTeam || []);
+    
+    wizardMatchData = {
+      scoreA: m.scoreA || 0,
+      scoreB: m.scoreB || 0,
+      scorers: m.scorers ? JSON.parse(JSON.stringify(m.scorers)) : {}
+    };
+  } else {
+    document.getElementById('wizardMatchId').value = '';
+    document.getElementById('wizardMatchDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('wizardMatchVenue').value = '';
+    document.getElementById('wizardMatchNote').value = '';
+    
+    selectResult('Thua', document.querySelector('#modalMatchWizard .result-option.lose'), 'wizard');
+    
+    populateMemberCheckboxes('wizardMatchWinningTeamCheckboxes', []);
+    populateMemberCheckboxes('wizardMatchLosingTeamCheckboxes', []);
+    populateMemberCheckboxes('wizardMatchDrawTeamCheckboxes', []);
+    
+    wizardMatchData = { scoreA: 0, scoreB: 0, scorers: {} };
+  }
+  
+  updateWizardUI();
+  wizardGoStep(1);
+  const delBtn = document.getElementById('wizardDeleteBtn');
+  if (delBtn) delBtn.style.display = isEdit ? 'block' : 'none';
+  openModal('modalMatchWizard');
+}
+
+function wizardGoStep(n) {
+  currentWizardStep = n;
+  document.querySelectorAll('.wizard-step-panel').forEach((p, i) => {
+    p.classList.toggle('active', i + 1 === n);
+  });
+  document.querySelectorAll('#wizardSteps .step-dot').forEach((d, i) => {
+    d.classList.toggle('active', i + 1 <= n);
+  });
+  
+  if (n === 2) {
+    const winTeam = Array.from(document.querySelectorAll('#wizardMatchWinningTeamCheckboxes input:checked')).map(i => i.value);
+    const loseTeam = Array.from(document.querySelectorAll('#wizardMatchLosingTeamCheckboxes input:checked')).map(i => i.value);
+    document.getElementById('wizardCountWin').textContent = winTeam.length + ' người';
+    document.getElementById('wizardCountLose').textContent = loseTeam.length + ' người';
+  }
+  
+  if (n === 3) {
+    renderWizardScorers();
+  }
+}
+
+function adjustScore(side, delta) {
+  const key = 'score' + side;
+  wizardMatchData[key] = Math.max(0, (wizardMatchData[key] || 0) + delta);
+  updateWizardUI();
+}
+
+function adjustGoal(name, delta) {
+  const current = wizardMatchData.scorers[name] || 0;
+  wizardMatchData.scorers[name] = Math.max(0, current + delta);
+  renderWizardScorers();
+}
+
+function updateWizardUI() {
+  document.getElementById('wizardScoreA').textContent = wizardMatchData.scoreA || 0;
+  document.getElementById('wizardScoreB').textContent = wizardMatchData.scoreB || 0;
+}
+
+function renderWizardScorers() {
+  const winTeam = Array.from(document.querySelectorAll('#wizardMatchWinningTeamCheckboxes input:checked')).map(i => i.value);
+  const loseTeam = Array.from(document.querySelectorAll('#wizardMatchLosingTeamCheckboxes input:checked')).map(i => i.value);
+  
+  let winSum = 0;
+  let loseSum = 0;
+  
+  const buildList = (team, side) => {
+    return team.map(name => {
+      const g = wizardMatchData.scorers[name] || 0;
+      if (side === 'A') winSum += g; else loseSum += g;
+      return `<div class="scorer-row">
+        <div class="name">${name}</div>
+        <div class="controls">
+          <button class="score-btn" onclick="adjustGoal('${name.replace(/'/g, "\'")}', -1)">−</button>
+          <span class="val">${g}</span>
+          <button class="score-btn" onclick="adjustGoal('${name.replace(/'/g, "\'")}', 1)">+</button>
+        </div>
+      </div>`;
+    }).join('');
+  };
+  
+  document.getElementById('scorerListWin').innerHTML = buildList(winTeam, 'A');
+  document.getElementById('scorerListLose').innerHTML = buildList(loseTeam, 'B');
+  
+  const scoreA = wizardMatchData.scoreA || 0;
+  const scoreB = wizardMatchData.scoreB || 0;
+  
+  const pw = document.getElementById('progressWin');
+  pw.textContent = `Đã ghi: ${winSum}/${scoreA} bàn`;
+  pw.className = `scorer-progress ${winSum === scoreA ? 'valid' : winSum > scoreA ? 'invalid' : ''}`;
+  
+  const pl = document.getElementById('progressLose');
+  pl.textContent = `Đã ghi: ${loseSum}/${scoreB} bàn`;
+  pl.className = `scorer-progress ${loseSum === scoreB ? 'valid' : loseSum > scoreB ? 'invalid' : ''}`;
+}
+
+function wizardValidateAndNext() {
+  const result = document.getElementById('wizardMatchResult').value;
+  
+  if (currentWizardStep === 1) {
+    if (result === 'Thua') {
+      const wCount = document.querySelectorAll('#wizardMatchWinningTeamCheckboxes input:checked').length;
+      const lCount = document.querySelectorAll('#wizardMatchLosingTeamCheckboxes input:checked').length;
+      if (wCount === 0 || lCount === 0) return showToast('Chọn đủ đội thắng và thua', 'error');
+      wizardGoStep(2);
+    } else if (result === 'Hòa') {
+      const dCount = document.querySelectorAll('#wizardMatchDrawTeamCheckboxes input:checked').length;
+      if (dCount === 0) return showToast('Chọn thành viên tham gia', 'error');
+      wizardSave();
+    } else {
+      wizardSave();
+    }
+  } else if (currentWizardStep === 2) {
+    const a = wizardMatchData.scoreA || 0;
+    const b = wizardMatchData.scoreB || 0;
+    if (a <= b) return showToast('Điểm đội thắng phải > đội thua', 'error');
+    wizardGoStep(3);
+  }
+}
+
+function wizardBack() {
+  if (currentWizardStep > 1) wizardGoStep(currentWizardStep - 1);
+}
+
+function wizardSkipScorers() {
+  wizardMatchData.scorers = {};
+  wizardSave();
+}
+
+async function wizardSave(btn) {
+  const idDate = document.getElementById('wizardMatchId').value;
+  const isEdit = !!idDate;
+  const date = document.getElementById('wizardMatchDate').value;
+  const result = document.getElementById('wizardMatchResult').value;
+  const venue = document.getElementById('wizardMatchVenue').value.trim();
+  const note = document.getElementById('wizardMatchNote').value.trim();
+  
+  if (!date) return showToast('Vui lòng chọn ngày', 'error');
+  if (!isEdit && state.matches.some(m => m.date === date)) {
+    return showToast('Đã có trận vào ngày này', 'error');
+  }
+
+  const winningTeam = [];
+  const losingTeam = [];
+  const playedTeam = [];
+  
+  if (result === 'Thua') {
+    document.querySelectorAll('#wizardMatchWinningTeamCheckboxes input:checked').forEach(cb => winningTeam.push(cb.value));
+    document.querySelectorAll('#wizardMatchLosingTeamCheckboxes input:checked').forEach(cb => losingTeam.push(cb.value));
+    playedTeam.push(...winningTeam, ...losingTeam);
+  } else if (result === 'Hòa') {
+    document.querySelectorAll('#wizardMatchDrawTeamCheckboxes input:checked').forEach(cb => playedTeam.push(cb.value));
+  }
+  
+  const scoreA = result === 'Thua' ? (wizardMatchData.scoreA || 0) : null;
+  const scoreB = result === 'Thua' ? (wizardMatchData.scoreB || 0) : null;
+  const scorers = result === 'Thua' ? (wizardMatchData.scorers || {}) : {};
+
+  if (result === 'Thua' && scorers && Object.keys(scorers).length > 0) {
+    let winSum = 0, loseSum = 0;
+    Object.entries(scorers).forEach(([name, goals]) => {
+      if (winningTeam.some(n => normName(n) === normName(name))) winSum += goals;
+      else loseSum += goals;
+    });
+    if (winSum > scoreA || loseSum > scoreB) {
+      return showToast('Tổng bàn ghi vượt tỷ số!', 'error');
+    }
+  }
+
+  const lock = lockButton(btn || event?.target);
+  const prevMatches = [...state.matches];
+  const prevFunds = [...state.fundPayments];
+  
+  let m;
+  if (isEdit) {
+    m = state.matches.find(x => x.date === idDate);
+    if (!m) { lock.release(); return; }
+    state.fundPayments = state.fundPayments.filter(p => !p.timestamp.startsWith(idDate));
+  } else {
+    m = { timestamp: new Date().toISOString() };
+    state.matches.push(m);
+  }
+  
+  m.date = date; 
+  m.opponent = "Nội bộ";
+  m.venue = venue; 
+  m.result = result; 
+  m.note = note; 
+  m.losingTeam = losingTeam;
+  m.winningTeam = winningTeam;
+  m.playedTeam = playedTeam;
+  m.scoreA = scoreA;
+  m.scoreB = scoreB;
+  m.scorers = scorers;
+
+  if (result === 'Thua') {
+    losingTeam.forEach(mem => {
+      state.fundPayments.push({
+        timestamp: date + " 21:00:00",
+        period: "Phạt thua",
+        member: mem,
+        amount: 20000,
+        note: `Phạt trận ngày ${date.split('-').reverse().slice(0, 2).join('/')}`,
+        periodRaw: "Phạt thua"
+      });
+    });
+  }
+
+  save(); renderAll(); closeModal('modalMatchWizard');
+  showToast(isEdit ? 'Đã cập nhật trận đấu ⚽' : 'Đã lưu trận đấu ⚽');
+  
+  if (state.apiUrl) {
+    const ok = await apiCall('/api/matches', isEdit ? 'PUT' : 'POST', m);
+    if (!ok) {
+      state.matches = prevMatches;
+      state.fundPayments = prevFunds;
+      save(); renderAll();
+      showToast('Lỗi kết nối — đã hoàn tác', 'error');
+    }
+  }
+  lock.release();
+}
+
+function renderTopScorers() {
+  const card = document.getElementById('topScorerCard');
+  if (!card) return;
+  
+  const stats = {};
+  state.matches.forEach(m => {
+    if (m.result === 'Thua' && m.scorers) {
+      Object.entries(m.scorers).forEach(([name, goals]) => {
+        if (goals > 0) {
+          if (!stats[name]) stats[name] = { goals: 0, matches: 0 };
+          stats[name].goals += goals;
+          stats[name].matches += 1;
+        }
+      });
+    }
+  });
+  
+  const entries = Object.entries(stats).sort((a, b) => b[1].goals - a[1].goals);
+  
+  if (entries.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+  
+  card.style.display = 'block';
+  const medals = ['🥇', '🥈', '🥉'];
+  
+  document.getElementById('topScorerList').innerHTML = entries.map((e, idx) => {
+    const rank = idx < 3 ? medals[idx] : (idx + 1);
+    return `<div class="top-scorer-row">
+      <div class="rank">${rank}</div>
+      <div class="info">
+        <div class="name">${e[0]}</div>
+        <div class="matches">${e[1].matches} trận ghi bàn</div>
+      </div>
+      <div class="goals">${e[1].goals}</div>
+    </div>`;
+  }).join('');
+}
+
 
 document.addEventListener('DOMContentLoaded', init);

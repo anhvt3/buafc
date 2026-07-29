@@ -69,6 +69,11 @@
           <span class="count" id="recentCount"></span>
         </div>
         <div id="recentMatches"></div>
+        
+        <div class="card" id="topScorerCard" style="display:none">
+          <div class="card-title">⚽ VUA PHÁ LƯỚI</div>
+          <div id="topScorerList"></div>
+        </div>
       </div>
 
       <!-- Matches Tab -->
@@ -299,64 +304,128 @@
       </div>
     </nav>
 
-    <!-- Add Match Modal -->
-    <div class="modal-overlay" id="modalMatch">
+    <!-- Match Wizard Modal -->
+    <div class="modal-overlay" id="modalMatchWizard">
       <div class="modal">
         <div class="modal-handle"></div>
-        <h2>⚽ Thêm trận đấu</h2>
-        <div class="form-group">
-          <label class="form-label">Ngày thi đấu</label>
-          <input type="date" class="form-input" id="matchDate">
+        <div class="wizard-steps" id="wizardSteps">
+          <div class="step-dot active"></div>
+          <div class="step-dot"></div>
+          <div class="step-dot"></div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Loại trận</label>
-          <input type="text" class="form-input" id="matchOpponent" value="Nội bộ" disabled>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Sân bóng</label>
-          <input type="text" class="form-input" id="matchVenue" placeholder="VD: Athena Đại Mỗ">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Kết quả</label>
-          <div class="result-selector">
-            <div class="result-option lose active" onclick="selectResult('Thua', this)">Đá xong (Có đội thua) ❌</div>
-            <div class="result-option draw" onclick="selectResult('Hòa', this)">Hòa 🤝</div>
-            <div class="result-option draw" onclick="selectResult('Hoãn', this)">Mưa hoãn 🌧️</div>
+        
+        <input type="hidden" id="wizardMatchId">
+        
+        <!-- STEP 1: Info + Teams -->
+        <div class="wizard-step-panel active" id="wizardStep1">
+          <h2>⚽ Thông tin trận đấu</h2>
+          <div class="form-group">
+            <label class="form-label">Ngày thi đấu</label>
+            <input type="date" class="form-input" id="wizardMatchDate">
           </div>
-          <input type="hidden" id="matchResult" value="Thua">
-        </div>
-        <!-- Selection Grid for Win/Lose Match -->
-        <div class="form-group" id="matchTeamsGroup" style="display: block;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div>
-              <label class="form-label" style="color: var(--accent);">Đội thắng cuộc 🟢</label>
-              <div class="member-checkbox-list" id="matchWinningTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(0, 255, 149, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(0, 255, 149, 0.02);">
-                <!-- Populated by JS -->
+          <div class="form-group">
+            <label class="form-label">Loại trận</label>
+            <input type="text" class="form-input" id="wizardMatchOpponent" value="Nội bộ" disabled>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sân bóng</label>
+            <input type="text" class="form-input" id="wizardMatchVenue" placeholder="VD: Athena Đại Mỗ">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kết quả</label>
+            <div class="result-selector">
+              <div class="result-option lose active" onclick="selectResult('Thua', this, 'wizard')">Đá xong (Có đội thua) ❌</div>
+              <div class="result-option draw" onclick="selectResult('Hòa', this, 'wizard')">Hòa 🤝</div>
+              <div class="result-option draw" onclick="selectResult('Hoãn', this, 'wizard')">Mưa hoãn 🌧️</div>
+            </div>
+            <input type="hidden" id="wizardMatchResult" value="Thua">
+          </div>
+          
+          <div class="form-group" id="wizardMatchTeamsGroup" style="display: block;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div>
+                <label class="form-label" style="color: var(--accent);">Đội thắng cuộc 🟢</label>
+                <div class="member-checkbox-list" id="wizardMatchWinningTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(0, 255, 149, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(0, 255, 149, 0.02);">
+                </div>
+              </div>
+              <div>
+                <label class="form-label" style="color: var(--danger);">Đội thua cuộc 🔴</label>
+                <div class="member-checkbox-list" id="wizardMatchLosingTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 51, 102, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 51, 102, 0.02);">
+                </div>
               </div>
             </div>
-            <div>
-              <label class="form-label" style="color: var(--danger);">Đội thua cuộc 🔴</label>
-              <div class="member-checkbox-list" id="matchLosingTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 51, 102, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 51, 102, 0.02);">
-                <!-- Populated by JS -->
-              </div>
+          </div>
+          
+          <div class="form-group" id="wizardMatchDrawGroup" style="display: none;">
+            <label class="form-label" style="color: var(--warning);">Thành viên tham gia (Hòa) 🤝</label>
+            <div class="member-checkbox-list" id="wizardMatchDrawTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 189, 46, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 189, 46, 0.02);">
             </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ghi chú</label>
+            <input type="text" class="form-input" id="wizardMatchNote" placeholder="Ghi chú thêm...">
+          </div>
+          <div style="display:flex;gap:10px;margin-top:20px">
+            <button class="btn btn-secondary" onclick="closeModal('modalMatchWizard')" style="flex:1">Hủy</button>
+            <button class="btn btn-secondary" id="wizardDeleteBtn" onclick="deleteMatch()" style="flex:1;background:rgba(239,68,68,0.2);color:#ef4444;border-color:transparent;display:none">Xóa</button>
+            <button class="btn btn-primary" onclick="wizardValidateAndNext()" style="flex:2">Tiếp →</button>
           </div>
         </div>
 
-        <!-- Selection for Draw Match -->
-        <div class="form-group" id="matchDrawGroup" style="display: none;">
-          <label class="form-label" style="color: var(--warning);">Thành viên tham gia (Hòa) 🤝</label>
-          <div class="member-checkbox-list" id="matchDrawTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 189, 46, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 189, 46, 0.02);">
-            <!-- Populated by JS -->
+        <!-- STEP 2: Score -->
+        <div class="wizard-step-panel" id="wizardStep2">
+          <h2>🔢 Tỷ số trận đấu</h2>
+          <div class="score-input-row">
+            <div class="score-side">
+              <div class="score-label" style="color: var(--accent);">ĐỘI THẮNG</div>
+              <div class="score-count" id="wizardCountWin">0 người</div>
+              <div class="score-controls">
+                <button class="score-btn" onclick="adjustScore('A', -1)">−</button>
+                <span class="score-value" id="wizardScoreA">0</span>
+                <button class="score-btn" onclick="adjustScore('A', 1)">+</button>
+              </div>
+            </div>
+            <div class="score-divider">:</div>
+            <div class="score-side">
+              <div class="score-label" style="color: var(--danger);">ĐỘI THUA</div>
+              <div class="score-count" id="wizardCountLose">0 người</div>
+              <div class="score-controls">
+                <button class="score-btn" onclick="adjustScore('B', -1)">−</button>
+                <span class="score-value" id="wizardScoreB">0</span>
+                <button class="score-btn" onclick="adjustScore('B', 1)">+</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:30px">
+            <button class="btn btn-secondary" onclick="wizardBack()" style="flex:1">← Quay lại</button>
+            <button class="btn btn-primary" onclick="wizardValidateAndNext()" style="flex:2">Tiếp →</button>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Ghi chú</label>
-          <input type="text" class="form-input" id="matchNote" placeholder="Ghi chú thêm...">
-        </div>
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <button class="btn btn-secondary" onclick="closeModal('modalMatch')" style="flex:1">Hủy</button>
-          <button class="btn btn-primary" onclick="saveMatch()" style="flex:2">Lưu trận đấu</button>
+
+        <!-- STEP 3: Scorers -->
+        <div class="wizard-step-panel" id="wizardStep3">
+          <h2>🎯 Người ghi bàn</h2>
+          
+          <div class="scorer-section" id="scorerSectionWin">
+            <div class="scorer-header" style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;">
+              <span style="color: var(--accent);font-weight:bold;">Đội thắng</span>
+              <span class="scorer-progress" id="progressWin" style="font-size:0.85rem;color:var(--text-muted)">Đã ghi: 0/0 bàn</span>
+            </div>
+            <div id="scorerListWin" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+          
+          <div class="scorer-section" id="scorerSectionLose" style="margin-top:20px;">
+            <div class="scorer-header" style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;">
+              <span style="color: var(--danger);font-weight:bold;">Đội thua</span>
+              <span class="scorer-progress" id="progressLose" style="font-size:0.85rem;color:var(--text-muted)">Đã ghi: 0/0 bàn</span>
+            </div>
+            <div id="scorerListLose" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:30px">
+            <button class="btn btn-secondary" onclick="wizardSkipScorers()" style="flex:1">Bỏ qua</button>
+            <button class="btn btn-primary" onclick="wizardSave()" style="flex:2">💾 Lưu trận đấu</button>
+          </div>
         </div>
       </div>
     </div>
@@ -403,70 +472,6 @@
         <div style="display:flex;gap:10px;margin-top:20px">
           <button class="btn btn-secondary" onclick="closeModal('modalMember')" style="flex:1">Hủy</button>
           <button class="btn btn-primary" onclick="saveMember()" style="flex:2">Thêm thành viên</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit Match Modal -->
-    <div class="modal-overlay" id="modalMatchEdit">
-      <div class="modal">
-        <div class="modal-handle"></div>
-        <h2>✏️ Sửa trận đấu</h2>
-        <input type="hidden" id="editMatchId">
-        <div class="form-group">
-          <label class="form-label">Ngày thi đấu</label>
-          <input type="date" class="form-input" id="editMatchDate">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Loại trận</label>
-          <input type="text" class="form-input" id="editMatchOpponent" value="Nội bộ" disabled>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Sân bóng</label>
-          <input type="text" class="form-input" id="editMatchVenue">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Kết quả</label>
-          <div class="result-selector">
-            <div class="result-option lose" onclick="selectResult('Thua', this, 'edit')">Đá xong (Có đội thua) ❌</div>
-            <div class="result-option draw" onclick="selectResult('Hòa', this, 'edit')">Hòa 🤝</div>
-            <div class="result-option draw" onclick="selectResult('Hoãn', this, 'edit')">Mưa hoãn 🌧️</div>
-          </div>
-          <input type="hidden" id="editMatchResult" value="">
-        </div>
-        <!-- Selection Grid for Win/Lose Match (Edit) -->
-        <div class="form-group" id="editMatchTeamsGroup" style="display: block;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div>
-              <label class="form-label" style="color: var(--accent);">Đội thắng cuộc 🟢</label>
-              <div class="member-checkbox-list" id="editMatchWinningTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(0, 255, 149, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(0, 255, 149, 0.02);">
-                <!-- Populated by JS -->
-              </div>
-            </div>
-            <div>
-              <label class="form-label" style="color: var(--danger);">Đội thua cuộc 🔴</label>
-              <div class="member-checkbox-list" id="editMatchLosingTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 51, 102, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 51, 102, 0.02);">
-                <!-- Populated by JS -->
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Selection for Draw Match (Edit) -->
-        <div class="form-group" id="editMatchDrawGroup" style="display: none;">
-          <label class="form-label" style="color: var(--warning);">Thành viên tham gia (Hòa) 🤝</label>
-          <div class="member-checkbox-list" id="editMatchDrawTeamCheckboxes" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255, 189, 46, 0.2); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 189, 46, 0.02);">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Ghi chú</label>
-          <input type="text" class="form-input" id="editMatchNote">
-        </div>
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <button class="btn btn-secondary" onclick="deleteMatch()"
-            style="flex:1;background:rgba(239,68,68,0.2);color:#ef4444;border-color:transparent">Xóa</button>
-          <button class="btn btn-primary" onclick="updateMatch()" style="flex:2">Lưu thay đổi</button>
         </div>
       </div>
     </div>

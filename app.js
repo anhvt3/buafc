@@ -1626,7 +1626,7 @@ function renderPairs() {
   const container = document.getElementById('pairsAnalysisContainer');
   if (!container) return;
 
-  const membersList = state.members.map(m => m.name);
+  const membersList = state.members.filter(m => m.status !== 'paused').map(m => m.name);
   const pairs = {};
 
   for (let i = 0; i < membersList.length; i++) {
